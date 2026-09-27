@@ -1,0 +1,47 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: ceap_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ceap_oltp
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ceap_oltp"]
+      interval: 5s
+      timeout: 5s
+      retries: 6
+    networks:
+      - ceap_network
+
+  ingestion:
+    build:
+      context: .
+      dockerfile: docker/ingestion/Dockerfile
+    container_name: ceap_ingestion
+    environment:
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: ceap_oltp
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      ANOS: "2023,2024,2025,2026"
+    volumes:
+      - ./base-dados:/app/base-dados
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - ceap_network
+
+volumes:
+  postgres_data:
+
+networks:
+  ceap_network:
+    driver: bridge

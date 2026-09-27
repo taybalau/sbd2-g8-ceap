@@ -1,0 +1,24 @@
+# Ignorar bases de dados locais e arquivos brutos volumosos
+# O trabalho exige que a carga baixe os dados sob demanda ou use cache local não versionado
+base-dados/*.csv
+base-dados/*.zip
+*.csv
+*.zip
+*.parquet
+
+# Volumes do Docker / Dados persistidos do banco
+postgres_data/
+pgdata/
+
+# Python / Ambientes virtuais
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+.env
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
