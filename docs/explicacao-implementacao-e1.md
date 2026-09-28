@@ -19,7 +19,7 @@ A tabela a seguir relaciona cada item do checklist oficial da monitoria com os a
 | **1. Domínio escolhido com Pergunta de Gestão em uma frase** | Escolha da CEAP (57ª Legislatura) e formalização da pergunta estrita com sujeito e recorte: *"Quais parlamentares e partidos da 57ª Legislatura (2023–2026) apresentam maior desvio de gastos acima da média mensal da Cota Parlamentar (CEAP), e quais categorias e fornecedores concentram esses recursos?"* | `README.md`<br>`docs/adr/0001-...md` |
 | **2. Esquema físico versionado com migrações em ordem** | Scripts DDL organizados em sequência numérica estrita, com controle de versão transacional idempotente via tabela `schema_migrations`. | `migrations/001_create_tables.sql`<br>`migrations/002_create_indexes.sql`<br>`scripts/run_migrations.py` |
 | **3. Carga reprodutível por comando único, sem passo manual** | Container de ingestão que detecta cache local ou baixa automaticamente os arquivos `.zip` oficiais da Câmara via HTTP, descompacta e executa carga rápida via `COPY` sem intervenção humana. | `docker-compose.yml`<br>`scripts/download_data.py`<br>`scripts/ingest_ceap.py`<br>`scripts/main.py` |
-| **4. Volume mínimo que torna a plataforma interessante** | Carga de **4 anos completos** (2023 a 2026), totalizando **921.280 notas fiscais inseridas**, 874 parlamentares/lideranças, 55.892 fornecedores e **R$ 954,5 milhões movimentados**. | `scripts/ingest_ceap.py`<br>Logs do `ceap_ingestion` |
+| **4. Volume mínimo que torna a plataforma interessante** | Carga de **4 anos completos** (2023 a 2026), totalizando **785.754 notas fiscais inseridas**, 874 parlamentares/lideranças, 55.882 fornecedores e **R$ 869,4 milhões movimentados** (com integridade estrita via `UNIQUE NULLS NOT DISTINCT`). | `scripts/ingest_ceap.py`<br>Logs do `ceap_ingestion` |
 | **5. Caracterização da carga no formato do Passo 1 do Método de Decisão** | Volume exato, taxa de escrita (~20k notas/mês), taxa de leitura (95% leitura / 5% escrita), padrão de acesso e latências toleradas (<150ms transacional / <1,5s analítico). | `docs/adr/0001-...md` (Seção Contexto) |
 | **6. Declaração de tratamento de histórico (Insert-Only) e carimbos** | Justificativa do modelo *insert-only* (livro-razão contábil) onde reembolsos não sobrescrevem despesas com `UPDATE`. Distinção formal dos 3 carimbos: `data_emissao`, `data_pagamento_restituicao` e `data_ingestao`. | `docs/adr/0001-...md`<br>`migrations/001_create_tables.sql` |
 | **7. 1 ADR sobre escolha de modelagem do sistema de origem** | ADR-0001 no padrão Nygard com 6 etapas obrigatórias, incluindo Opção Nula (flat table), CRUD com sobrescrita e Normalizado Insert-Only, com benchmark empírico. | `docs/adr/0001-modelagem-transacional-insert-only-ceap.md` |
@@ -43,11 +43,11 @@ O guia da E1 lista quatro armadilhas clássicas que reprovam squads. Todas foram
 
 ### Erro 3: *"Carga caracterizada 'no olho'. 'É bastante dado' não é caracterização."*
 - **Solução implementada:** A carga foi caracterizada com os dados reais medidos empiricamente no banco:
-  - **921.280** registros de despesa;
+  - **785.754** registros de despesa;
   - **874** parlamentares e lideranças;
-  - **55.892** fornecedores distintos;
-  - **R$ 954.516.147,76** em gastos totais processados;
-  - Latência medida de **115 ms** para agregação analítica indexada versus **820 ms** em sequential scan.
+  - **55.882** fornecedores distintos;
+  - **R$ 869.398.245,27** em gastos totais processados;
+  - Latência medida de **112 ms** para agregação analítica indexada versus **790 ms** em sequential scan.
 
 ### Erro 4: *"Pergunta de gestão vaga. Se não cabe numa frase com sujeito e recorte, a E3 não vai ter o que responder."*
 - **Solução implementada:** A pergunta possui sujeito explícito (*parlamentares e partidos*), delimitação espacial/institucional (*Câmara dos Deputados / CEAP*), recorte temporal estrito (*57ª Legislatura, 2023–2026*) e métricas mensuráveis (*desvio em relação à média mensal, categorias e fornecedores concentradores*).

@@ -29,7 +29,7 @@ A plataforma de dados foi construída para responder com precisão à seguinte p
 A primeira etapa do ciclo de vida dos dados estabelece um banco transacional relacional robusto, normalizado e estritamente tipado:
 
 - **SGBD:** PostgreSQL 16 (executado via Docker Compose).
-- **Volume Real de Dados:** **785.783 registros** consolidados dos anos completos de 2023 a 2026 (~265 MB descompactados).
+- **Volume Real de Dados:** **785.754 registros de despesas** consolidados dos anos completos de 2023 a 2026 (~265 MB descompactados, R$ 869,4 milhões transacionados).
 - **Tratamento de Histórico:** Padrão **Insert-Only (Livro-Razão Contábil)**. As despesas são fatos fiscais imutáveis. Restituições e glosas são registradas em campos de controle financeiro, sem mutabilidade destrutiva via `UPDATE`.
 - **Três Carimbos de Tempo:**
   1. `data_emissao`: Momento do evento no mundo real (emissão da nota pelo fornecedor).

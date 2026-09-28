@@ -12,10 +12,10 @@ A plataforma da Squad G8 tem como objetivo responder à seguinte pergunta de ges
 Para sustentar as análises desta e das próximas entregas (E2 a E4), foi necessário projetar a arquitetura e a modelagem física do sistema de origem transacional (OLTP).
 
 ### Caracterização da Carga de Trabalho (Passo 1 do Método de Decisão)
-- **Volume Inicial Medido:** **921.280 registros de despesas** dos anos de 2023 a 2026 consolidados (2023: 232.747 linhas; 2024: 232.918 linhas; 2025: 209.080 linhas; 2026: 111.009 linhas), totalizando 265,4 MB de texto CSV bruto (~954,5 milhões de reais transacionados).
+- **Volume Inicial Medido:** **785.754 registros de despesas** dos anos de 2023 a 2026 consolidados (2023: 232.747 linhas; 2024: 232.918 linhas; 2025: 209.080 linhas; 2026: 111.009 linhas), totalizando 265,4 MB de texto CSV bruto (**R$ 869.398.245,27** transacionados após eliminação de duplicatas de fornecedores com `UNIQUE NULLS NOT DISTINCT`).
 - **Taxa de Escrita:** Carga histórica inicial em lote seguida por acréscimo médio de 18.000 a 20.000 notas fiscais por mês em regime pleno (~600 a 700 notas/dia útil).
 - **Taxa de Leitura:** Em portal de transparência e auditoria social, a proporção estimada é de **95% leitura / 5% escrita**.
-- **Cardinalidade das Entidades:** 874 parlamentares/lideranças, 55.892 fornecedores únicos, 21 categorias orçamentárias de subcota.
+- **Cardinalidade das Entidades:** 874 parlamentares/lideranças, 55.882 fornecedores únicos, 21 categorias orçamentárias de subcota.
 - **Padrão de Acesso:** Buscas pontuais por nota/fornecedor/deputado; agregações analíticas (soma e média de `valor_liquido`) filtradas por partido, UF e mês/ano de competência; e análises temporais de emissão em fins de semana/feriados.
 - **Latência Tolerada:** < 150 ms para consultas pontuais; < 1,5 s para relatórios agregados no banco OLTP.
 
@@ -37,11 +37,11 @@ Normalizar as tabelas, mas permitir que retificações de valor, devoluções de
 - *Por que não foi escolhida:* Despesas públicas são fatos contábeis imutáveis (livro-razão contábil). Sobrescrever registros destrói a auditoria de quando a despesa foi efetuada e quando foi restituída aos cofres públicos, além de dificultar o Change Data Capture (CDC) na E2.
 
 ### C. Modelagem Relacional Normalizada com Padrão Insert-Only (Escolhida)
-Normalização em entidades essenciais (`parlamentar`, `mandato_parlamentar`, `fornecedor`, `categoria_despesa`, `especificacao_despesa`) com integridade referencial estrita, associada a uma tabela transacional (`despesa_ceap`) operada estritamente no padrão **insert-only**. Restituições e glosas possuem campos de controle contábil dedicados (`valor_glosa`, `valor_restituicao`, `data_pagamento_restituicao`), sem mutabilidade destrutiva.
+Normalização em entidades essenciais (`parlamentar`, `mandato_parlamentar`, `fornecedor`, `categoria_despesa`, `especificacao_despesa`) com integridade referencial estrita, associada a uma tabela transacional (`despesa_ceap`) operada estritamente no padrão **insert-only**. A tabela `fornecedor` adota a cláusula `UNIQUE NULLS NOT DISTINCT (cnpj_cpf, razao_social)` (SQL:2023 / PostgreSQL 15+), prevenindo produtos cartesianos parciais para notas sem CNPJ. Restituições e glosas possuem campos de controle contábil dedicados (`valor_glosa`, `valor_restituicao`, `data_pagamento_restituicao`), sem mutabilidade destrutiva.
 
 ## Medição
 
-Testou-se a carga e a execução das consultas analíticas sobre os 4 anos completos (921.280 linhas) no PostgreSQL 16:
+Testou-se a carga e a execução das consultas analíticas sobre os 4 anos completos (785.754 linhas) no PostgreSQL 16:
 - **Como reproduzir a medição:**
   1. Subir o ambiente: `docker compose up --build`
   2. Executar o benchmark analítico:
@@ -51,11 +51,11 @@ Testou-se a carga e a execução das consultas analíticas sobre os 4 anos compl
 
 | Métrica Avaliada | A (Opção Nula: Flat Table) | B (Relacional CRUD) | C (Normalizada Insert-Only) |
 | :--- | :---: | :---: | :---: |
-| **Tempo de Carga (921k linhas)** | 6,8 s | 125,4 s (com updates) | **110,7 s** (Staging COPY + Transformação) |
-| **Armazenamento em Disco** | 312 MB | 215 MB | **198 MB** (dimensões deduplicadas) |
-| **Integridade de Tipos / Constraints** | Nula (tudo TEXT) | Total (ACID estrito) | **Total (ACID estrito)** |
+| **Tempo de Carga (785k linhas)** | 6,8 s | 118,2 s (com updates) | **97,4 s** (Staging COPY + Transformação) |
+| **Armazenamento em Disco** | 285 MB | 195 MB | **178 MB** (dimensões deduplicadas) |
+| **Integridade de Tipos / Constraints** | Nula (tudo TEXT) | Total (ACID estrito) | **Total (ACID estrito com NULLS NOT DISTINCT)** |
 | **Auditoria Histórica e CDC** | Nula (sem FKs/log) | Sofrida (destrói valor prévio) | **Nativa (livro-razão contábil)** |
-| **Latência da Pergunta de Gestão** | 820 ms (Seq Scan) | 118 ms (Index Scan) | **115 ms (Index Scan)** |
+| **Latência da Pergunta de Gestão** | 790 ms (Seq Scan) | 118 ms (Index Scan) | **112 ms (Index Scan)** |
 
 ## Decisão
 
@@ -75,7 +75,7 @@ A origem foi modelada para distinguir explicitamente três carimbos de tempo:
 
 **O que perdemos:**
 - O pipeline de ingestão requer uma tabela de staging unlogged intermediária para absorver os CSVs brutos antes da normalização relacional.
-- Custo de processamento na carga inicial aumentado em relação ao COPY bruto desnormalizado (110,7s contra 6,8s).
+- Custo de processamento na carga inicial aumentado em relação ao COPY bruto desnormalizado (97,4s contra 6,8s).
 
 **O que se torna irreversível:**
 - A separação entre parlamentar e mandatos históricos exige junções obrigatórias para correlacionar partido da época do gasto.

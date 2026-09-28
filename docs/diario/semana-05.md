@@ -11,17 +11,17 @@
   - Implementação do pipeline de carga de alta performance via `COPY` e normalização relacional em dois estágios (`scripts/ingest_ceap.py`).
   - Configuração do `docker-compose.yml` e `docker/ingestion/Dockerfile` com `healthcheck` de banco.
 - **Métricas Reais Obtidas na Execução:**
-  - Carga dos 4 anos completos da CEAP (2023 a 2026) finalizada em apenas **110,7 segundos**.
-  - **921.280 registros de despesas inseridos** na tabela transacional `despesa_ceap`.
+  - Carga dos 4 anos completos da CEAP (2023 a 2026) finalizada em apenas **97,4 segundos**.
+  - **785.754 registros de despesas inseridos** na tabela transacional `despesa_ceap` (100% íntegro com os CSVs originais).
   - **874 parlamentares e lideranças** cadastrados na tabela `parlamentar`.
-  - **55.892 fornecedores distintos** cadastrados na tabela `fornecedor`.
+  - **55.882 fornecedores distintos** cadastrados na tabela `fornecedor`.
   - **21 categorias orçamentárias** cadastradas na tabela `categoria_despesa`.
-  - **Volume total pago na legislatura:** **R$ 954.516.147,76**.
-  - Latência da consulta analítica da Pergunta de Gestão com índices compostos: **115 ms**.
+  - **Volume total pago na legislatura:** **R$ 869.398.245,27**.
+  - Latência da consulta analítica da Pergunta de Gestão com índices compostos: **112 ms**.
 
 ## O que surpreendeu
-- A eficiência real da tabela `UNLOGGED` associada ao comando `COPY` do PostgreSQL: todo o volume de quase 1 milhão de linhas (~265 MB) foi transferido, higienizado e normalizado com integridade referencial em menos de 2 minutos.
-- A estabilidade da orquestração Docker: a dependência com `healthcheck` eliminou qualquer condição de corrida entre a inicialização do PostgreSQL e o container Python de ingestão.
+- A eficiência real da tabela `UNLOGGED` associada ao comando `COPY` do PostgreSQL: todo o volume de quase 800 mil linhas (~265 MB) foi transferido, higienizado e normalizado com integridade referencial em apenas 97 segundos.
+- A sutileza do padrão ANSI SQL onde `NULL != NULL` em constraints `UNIQUE`: na carga ano a ano, fornecedores sem CNPJ (como bilhetes aéreos) não batiam no `ON CONFLICT`, gerando duplicatas. A aplicação da cláusula moderna `UNIQUE NULLS NOT DISTINCT` do PostgreSQL 16 resolveu cirurgicamente o problema e restabeleceu a contagem exata de 785.754 despesas.
 
 ## O que foi decidido
 - Fechamento formal de todos os artefatos da Entrega E1:
