@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS fornecedor (
     cnpj_cpf VARCHAR(30) NULL,                  -- txtCNPJCPF (pode ser nulo ou genérico para cia aérea)
     razao_social VARCHAR(255) NOT NULL,         -- txtFornecedor
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT uk_fornecedor_doc_nome UNIQUE (cnpj_cpf, razao_social)
+    CONSTRAINT uk_fornecedor_doc_nome UNIQUE NULLS NOT DISTINCT (cnpj_cpf, razao_social)
 );
 
 -- 4. Tabela: categoria_despesa (subcotas orçamentárias da CEAP)
