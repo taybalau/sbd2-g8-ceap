@@ -1,7 +1,7 @@
 # Diário de Bordo — Semana 03
 
 - **Data:** 07/09/2026
-- **Participantes:** Filipe Carvalho, Taynara Vitorino, Gabriel Esteves, Maria Clara Alves, Kalo Macedo, Amanda Gonçalves (Squad G8)
+- **Participantes:** Filipe Carvalho, Taynara Vitorino, Gabriel Esteves, Maria Clara Alves, Kaio Macedo, Amanda Gonçalves (Squad G8)
 
 ## O que foi medido
 - Inspeção conceitual das 32 colunas fornecidas no layout oficial dos arquivos da CEAP pela Câmara dos Deputados.

@@ -1,7 +1,7 @@
 # Diário de Bordo — Semana 05
 
 - **Data:** 21/09/2026 a 28/09/2026 (Fechamento e Entrega da E1 em 28/09/2026)
-- **Participantes:** Filipe Carvalho, Taynara Vitorino, Gabriel Esteves, Maria Clara Alves, Kalo Macedo, Amanda Gonçalves (Squad G8)
+- **Participantes:** Filipe Carvalho, Taynara Vitorino, Gabriel Esteves, Maria Clara Alves, Kaio Macedo, Amanda Gonçalves (Squad G8)
 
 ## O que foi medido
 - **Construção e Execução dos Scripts e Migrações:**

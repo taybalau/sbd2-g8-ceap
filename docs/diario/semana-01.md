@@ -1,7 +1,7 @@
 # Diário de Bordo — Semana 01
 
 - **Data:** 24/08/2026
-- **Participantes:** Filipe Carvalho, Taynara Vitorino, Gabriel Esteves, Maria Clara Alves, Kalo Macedo, Amanda Gonçalves (Squad G8)
+- **Participantes:** Filipe Carvalho, Taynara Vitorino, Gabriel Esteves, Maria Clara Alves, Kaio Macedo, Amanda Gonçalves (Squad G8)
 
 ## O que foi medido
 - Levantamento comparativo e votação interna na Squad G8 sobre as bases de dados públicas brasileiras candidatas para o projeto:

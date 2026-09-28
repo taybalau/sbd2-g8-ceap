@@ -1,7 +1,7 @@
 # Diário de Bordo — Semana 02
 
 - **Data:** 31/08/2026
-- **Participantes:** Filipe Carvalho, Taynara Vitorino, Gabriel Esteves, Maria Clara Alves, Kalo Macedo, Amanda Gonçalves (Squad G8)
+- **Participantes:** Filipe Carvalho, Taynara Vitorino, Gabriel Esteves, Maria Clara Alves, Kaio Macedo, Amanda Gonçalves (Squad G8)
 
 ## O que foi medido
 - Levantamento e análise das perguntas de interesse público levantadas pelo grupo para o domínio da CEAP:

@@ -1,7 +1,7 @@
 # Diário de Bordo — Semana 04
 
 - **Data:** 14/09/2026
-- **Participantes:** Filipe Carvalho, Taynara Vitorino, Gabriel Esteves, Maria Clara Alves, Kalo Macedo, Amanda Gonçalves (Squad G8)
+- **Participantes:** Filipe Carvalho, Taynara Vitorino, Gabriel Esteves, Maria Clara Alves, Kaio Macedo, Amanda Gonçalves (Squad G8)
 
 ## O que foi medido
 - Análise comparativa teórica entre um modelo relacional CRUD com sobrescrita (`UPDATE`) versus um modelo de livro-razão contábil (*insert-only*).
