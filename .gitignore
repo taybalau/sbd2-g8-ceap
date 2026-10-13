@@ -22,3 +22,6 @@ env/
 # Sistema operacional
 .DS_Store
 Thumbs.db
+
+# Site gerado pelo MkDocs
+site/

@@ -1,0 +1,93 @@
+site_name: Plataforma de Dados da CEAP
+site_description: Plataforma de dados da Cota Parlamentar (CEAP) da 57ª Legislatura — Squad G8, SBD2 2026/2, UnB
+site_author: Squad G8
+site_url: https://taybalau.github.io/sbd2-g8-ceap/
+repo_url: https://github.com/taybalau/sbd2-g8-ceap
+repo_name: taybalau/sbd2-g8-ceap
+edit_uri: edit/main/docs/
+copyright: Squad G8 — Sistemas de Banco de Dados 2 (2026/2) — Universidade de Brasília
+
+theme:
+  name: material
+  language: pt-BR
+  icon:
+    logo: material/database
+    repo: fontawesome/brands/github
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: amber
+      toggle:
+        icon: material/weather-night
+        name: Mudar para modo escuro
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: amber
+      toggle:
+        icon: material/weather-sunny
+        name: Mudar para modo claro
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - navigation.indexes
+    - search.highlight
+    - search.suggest
+    - content.code.copy
+    - content.tabs.link
+    - toc.follow
+
+nav:
+  - Início: index.md
+  - Como executar: como-executar.md
+  - Plataforma:
+      - Arquitetura: arquitetura.md
+      - Modelo de dados: modelo-de-dados.md
+      - Pipeline de ingestão: pipeline.md
+      - Perguntas de gestão: consultas.md
+  - Governança:
+      - "ADR-0001 — Modelagem insert-only": adr/0001-modelagem-transacional-insert-only-ceap.md
+      - Diário de bordo:
+          - diario/index.md
+          - Semana 01: diario/semana-01.md
+          - Semana 02: diario/semana-02.md
+          - Semana 03: diario/semana-03.md
+          - Semana 04: diario/semana-04.md
+          - Semana 05: diario/semana-05.md
+      - Uso de IA: ia.md
+  - Release Notes: release-notes.md
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - md_in_html
+  - tables
+  - footnotes
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets:
+      base_path: ["."]
+      check_paths: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/taybalau/sbd2-g8-ceap
