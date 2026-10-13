@@ -286,4 +286,4 @@ A decisão será reaberta se:
 
 ## 11. Uso de IA
 
-O desenvolvimento contou com o assistente Google Antigravity (conforme declarado em [`AI-USAGE.md`](AI-USAGE.md)), com revisão e validação humana de todo o código, esquema e documentação pela Squad G8.
+O desenvolvimento contou com o assistente Google Antigravity (conforme declarado em [`AI-USAGE.md`](https://github.com/taybalau/sbd2-g8-ceap/blob/main/AI-USAGE.md)), com revisão e validação humana de todo o código, esquema e documentação pela Squad G8.

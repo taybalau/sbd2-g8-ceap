@@ -27,6 +27,6 @@
 - Fechamento formal de todos os artefatos da Entrega E1:
   - Código, migrações, scripts e orquestração Docker validados ponta a ponta;
   - Documento [`ADR-0001`](../adr/0001-modelagem-transacional-insert-only-ceap.md) consolidado no formato Nygard em 6 passos, integrando as métricas reais medidas;
-  - Preenchimento completo da planilha oficial [`projetoengenhariadedadosbd2.xlsx`](../projetoengenhariadedadosbd2.xlsx) com 7 de 7 abas concluídas (100% OK);
-  - [`AI-USAGE.md`](../../AI-USAGE.md) e [`README.md`](../../README.md) finalizados;
+  - Preenchimento completo da planilha oficial [`SBD2_Planilha de acompanhamento_G8.xlsx`](<../SBD2_Planilha de acompanhamento_G8.xlsx>) com 7 de 7 abas concluídas (100% OK);
+  - [`AI-USAGE.md`](https://github.com/taybalau/sbd2-g8-ceap/blob/main/AI-USAGE.md) e [`README.md`](https://github.com/taybalau/sbd2-g8-ceap/blob/main/README.md) finalizados;
   - Geração da tag `e1` no repositório Git para submissão oficial da Squad G8.
