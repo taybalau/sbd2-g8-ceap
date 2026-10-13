@@ -4,6 +4,15 @@ import psycopg2
 from download_data import ensure_data_available
 from run_migrations import apply_migrations
 from ingest_ceap import ingest_csv_files
+from batch_ingest_lakehouse import run_batch_ingestion_lakehouse
+from enrich_receita_socios import salvar_tabelas_delta_receita
+from test_e2_pipeline import (
+    test_1_idempotencia_batch,
+    test_2_cdc_mutacao_atravessando_fluxo,
+    test_3_dado_atrasado_roteamento_de_janela,
+    test_4_reprocessamento_semantica_entrega,
+    test_5_auditoria_societaria_beneficiario_final
+)
 
 def get_connection(retries=15, delay=2):
     db_host = os.getenv("DB_HOST", "localhost")
@@ -133,14 +142,16 @@ def test_management_query(conn):
         print("=" * 90 + "\n")
 
 def main():
-    print("=" * 70)
-    print("  PLATAFORMA CEAP — INGESTÃO REPRODUTÍVEL E MIGRAÇÕES (SBD2 - E1)")
-    print("=" * 70)
+    print("=" * 90)
+    print("  PLATAFORMA CEAP — INGESTÃO EM LOTE, CDC E LAKEHOUSE ABERTO (SBD2 - ENTREGA E2)")
+    print("=" * 90)
+
+    lakehouse_path = os.getenv("LAKEHOUSE_PATH", "./lakehouse")
 
     # 1. Conexão com o banco
     conn = get_connection()
 
-    # 2. Execução das migrações
+    # 2. Execução das migrações (inclui replicação lógica para CDC)
     apply_migrations(conn, migrations_dir="migrations")
 
     # 3. Garantir dados disponíveis (cache local ou download automatizado da Câmara)
@@ -148,14 +159,34 @@ def main():
     anos = [int(a.strip()) for a in anos_env.split(",") if a.strip()]
     csv_files = ensure_data_available(anos, target_dir="base-dados")
 
-    # 4. Ingestão e carga no modelo transacional
+    # 4. Ingestão e carga no modelo transacional (OLTP)
     ingest_csv_files(conn, csv_files)
 
     # 5. Validação da consulta analítica da pergunta de gestão
     test_management_query(conn)
 
+    # 6. Ingestão em Lote para o Lakehouse Aberto (Caminho 1 - Delta Lake)
+    run_batch_ingestion_lakehouse(lakehouse_path)
+
+    # 7. Enriquecimento Cadastral e Cadeia Societária (Receita Federal / QSA / UBO)
+    salvar_tabelas_delta_receita(lakehouse_path)
+
+    # 8. Demonstração Analítica da Cadeia Societária (CNPJs até o Beneficiário Final)
+    from consulta_caminho_societario import executar_consultas_caminho_societario
+    executar_consultas_caminho_societario(lakehouse_path)
+
+    # 9. Bateria Completa de Testes de Aceite da Monitoria da E2
+    test_1_idempotencia_batch(lakehouse_path)
+    test_2_cdc_mutacao_atravessando_fluxo(lakehouse_path)
+    test_3_dado_atrasado_roteamento_de_janela(lakehouse_path)
+    test_4_reprocessamento_semantica_entrega(lakehouse_path)
+    test_5_auditoria_societaria_beneficiario_final(lakehouse_path)
+
     conn.close()
-    print("[FINALIZADO] Plataforma transacional (E1) pronta e operando com sucesso!\n")
+
+    print("\n" + "=" * 90)
+    print("  [FINALIZADO COM SUCESSO] PLATAFORMA INTEGRADA DA ENTREGA E2 EM OPERAÇÃO PLENA!")
+    print("=" * 90 + "\n")
 
 if __name__ == "__main__":
     main()

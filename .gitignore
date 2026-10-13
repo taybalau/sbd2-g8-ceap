@@ -6,9 +6,10 @@ base-dados/*.zip
 *.zip
 *.parquet
 
-# Volumes do Docker / Dados persistidos do banco
+# Volumes do Docker / Dados persistidos do banco e lakehouse
 postgres_data/
 pgdata/
+lakehouse/
 
 # Python / Ambientes virtuais
 __pycache__/

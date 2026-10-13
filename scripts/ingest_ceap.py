@@ -143,7 +143,21 @@ def ingest_csv_files(conn, csv_files: dict[int, str]):
     print("[INGESTAO] Iniciando processamento dos dados da CEAP...")
 
     with conn.cursor() as cur:
+        # Verifica se o banco já está populado ou se foi inflado por execuções repetidas
+        cur.execute("SELECT count(*) FROM despesa_ceap;")
+        qtd_atual = cur.fetchone()[0]
+
+        if qtd_atual == 785754:
+            print(f"[INGESTAO] Banco OLTP já está perfeitamente populado com 785.754 despesas. Pulando recarga.")
+            return
+        elif qtd_atual > 785754:
+            print(f"[INGESTAO] Detectadas {qtd_atual:,} linhas acumuladas por execuções repetidas.")
+            print("[INGESTAO] Resetando tabela transacional despesa_ceap para restaurar os 785.754 registros oficiais...")
+            cur.execute("TRUNCATE TABLE despesa_ceap RESTART IDENTITY CASCADE;")
+            conn.commit()
+
         for year, filepath in sorted(csv_files.items()):
+
             year_start = time.time()
             print(f"\n[INGESTAO] Processando {filepath} (Ano {year})...")
 

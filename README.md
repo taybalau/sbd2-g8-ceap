@@ -22,11 +22,14 @@ A plataforma de dados foi construída para responder com precisão à seguinte p
 
 > **"Quais parlamentares e partidos da 57ª Legislatura (2023–2026) apresentam maior desvio de gastos acima da média mensal da Cota Parlamentar (CEAP), e quais categorias e fornecedores concentram esses recursos?"**
 
+Com o enriquecimento da **Entrega E2**, a pergunta ganha profundidade de auditoria societária:
+> *"Quais despesas da CEAP pagas a múltiplos CNPJs aparentemente concorrentes concentram recursos no mesmo Beneficiário Final (mesmo CPF ou grupo econômico controlador)?"*
+
 ---
 
 ### 2. Arquitetura da Entrega E1: Fonte Transacional (OLTP)
 
-A primeira etapa do ciclo de vida dos dados estabelece um banco transacional relacional robusto, normalizado e estritamente tipado:
+A primeira etapa do ciclo de vida dos dados estabeleceu um banco transacional relacional robusto, normalizado e estritamente tipado:
 
 - **SGBD:** PostgreSQL 16 (executado via Docker Compose).
 - **Volume Real de Dados:** **785.754 registros de despesas** consolidados dos anos completos de 2023 a 2026 (~265 MB descompactados, R$ 869,4 milhões transacionados).
@@ -38,9 +41,20 @@ A primeira etapa do ciclo de vida dos dados estabelece um banco transacional rel
 
 ---
 
-### 3. Como Subir a Plataforma do Zero (Execução Reprodutível)
+### 3. Arquitetura da Entrega E2: Ingestão em Lote, CDC e Lakehouse Aberto
 
-A plataforma foi projetada para subir **do zero em máquina limpa** a partir do repositório, sem nenhum passo manual de download de arquivos ou configuração prévia de banco:
+A segunda etapa estabelece a movimentação analítica de dados sem lock-in, através de dois caminhos de natureza distinta e enriquecimento público:
+
+- **Caminho 1 (Em Lote):** Pipeline em lote idempotente que grava os dados da CEAP na tabela **Delta Lake** (`lakehouse/delta/despesa_ceap`), particionada por `ano_competencia` e comprimida em **Zstandard (`zstd`)**. A reexecução é comprovadamente idempotente (0 linhas duplicadas).
+- **Caminho 2 (Captura de Mudanças - CDC):** Captura contínua de mutações a partir da decodificação lógica do Write-Ahead Log (**WAL**) do PostgreSQL (`wal_level=logical`), aplicando `MERGE` atômico na tabela Delta com semântica **At-Least-Once com Deduplicação Idempotente (Effectively-Once)**.
+- **Tratamento de Dado Atrasado (*Late-Arriving Data*):** Eventos fiscais com atraso de meses/anos são roteados e consolidados na partição histórica de sua competência real (`ano_competencia`), preservando o fechamento contábil.
+- **Enriquecimento com a Receita Federal (QSA e Beneficiário Final):** Mapeamento do Quadro de Sócios e Administradores com algoritmo recursivo de UBO (*Ultimate Beneficial Owner*), identificando grupos econômicos reais onde múltiplos CNPJs pertencem à mesma pessoa física.
+
+---
+
+### 4. Como Subir a Plataforma do Zero (Execução Reprodutível)
+
+A plataforma foi projetada para subir **do zero em máquina limpa** a partir do repositório, sem nenhum passo manual de configuração:
 
 #### Pré-requisitos
 - [Docker](https://docs.docker.com/get-docker/) instalado e ativo.
@@ -53,47 +67,53 @@ No diretório raiz do projeto clonado, execute:
 docker compose up --build
 ```
 
-#### O que o comando faz automaticamente:
-1. Sobe o container do **PostgreSQL 16** e aguarda o healthcheck (`pg_isready`).
+#### O que o comando executa automaticamente:
+1. Sobe o **PostgreSQL 16** com replicação lógica habilitada (`wal_level=logical`).
 2. Dispara o container de **ingestão**, que:
-   - Executa as migrações em ordem sequencial a partir de `migrations/` (`001_create_tables.sql` e `002_create_indexes.sql`), registrando versões na tabela `schema_migrations`.
-   - Verifica se os arquivos CSV já existem localmente em `base-dados/`; se não existirem, **faz o download automatizado** dos arquivos oficiais compactados (`.zip`) diretamente do portal da Câmara dos Deputados (`http://www.camara.leg.br/cotas/`).
-   - Carrega os dados via PostgreSQL `COPY` em tabela de staging unlogged e executa a carga relacional com integridade referencial em segundos.
-   - Executa uma query de validação no terminal demonstrando os resultados da pergunta de gestão.
+   - Executa as migrações sequenciais em `migrations/` (`001`, `002` e `003`), criando tabelas, índices e publicação lógica de CDC.
+   - Baixa (ou valida o cache local) dos CSVs oficiais da CEAP (2023 a 2026).
+   - Realiza a carga transacional OLTP via `COPY` em tabela unlogged e normalização com integridade referencial.
+   - Executa a **Ingestão em Lote para o Delta Lake** (`batch_ingest_lakehouse.py`).
+   - Gera o **Enriquecimento de Sócios (QSA) e Beneficiário Final** da Receita Federal (`enrich_receita_socios.py`).
+   - Roda a **Bateria Completa de Testes de Aceite da E2** (`test_e2_pipeline.py`) demonstrando:
+     - Idempotência do lote (execução dupla = 0 duplicatas);
+     - CDC em ação com mutações no OLTP refletidas no Lakehouse em subsegundo;
+     - Tratamento explícito de dados atrasados;
+     - Semântica de entrega e deduplicação;
+     - Auditoria analítica de grupos econômicos e sócios UBO.
 
 ---
 
-### 4. Como Conectar e Consultar o Banco
+### 5. Como Consultar o Lakehouse Aberto (DuckDB / Zero Lock-in)
 
-Você pode conectar ao banco usando qualquer cliente SQL (DBeaver, pgAdmin, VSCode ou `psql`):
+Você pode consultar diretamente os dados analíticos abertos usando **DuckDB** sem precisar de nenhum servidor intermediário:
 
-- **Host:** `localhost` (ou `127.0.0.1`)
-- **Porta:** `5432`
-- **Banco de Dados:** `ceap_oltp`
-- **Usuário:** `postgres`
-- **Senha:** `postgres`
-
-#### Exemplo de Consulta Via Terminal (Container Docker)
 ```bash
-docker exec -it ceap_postgres psql -U postgres -d ceap_oltp -c "
-SELECT 
-    p.nome_parlamentar,
-    d.sigla_partido_emissao AS partido,
-    d.sigla_uf_emissao AS uf,
-    COUNT(d.id_despesa) AS total_notas,
-    ROUND(SUM(d.valor_liquido), 2) AS total_gasto
-FROM despesa_ceap d
-JOIN parlamentar p ON p.id_deputado = d.id_deputado
-GROUP BY p.nome_parlamentar, d.sigla_partido_emissao, d.sigla_uf_emissao
-ORDER BY total_gasto DESC
-LIMIT 10;
+docker exec -it ceap_ingestion python -c "
+import duckdb
+con = duckdb.connect()
+print(con.execute('''
+    SELECT 
+        ano_competencia,
+        COUNT(*) AS total_notas,
+        ROUND(SUM(valor_liquido), 2) AS total_gasto
+    FROM delta_scan('lakehouse/delta/despesa_ceap')
+    GROUP BY ano_competencia
+    ORDER BY ano_competencia;
+''').fetchdf())
 "
 ```
 
 ---
 
-### 5. Documentos e Governança
+### 6. Documentos e Governança
 
-- **ADR-0001 (Decisão Arquitetural):** [docs/adr/0001-modelagem-transacional-insert-only-ceap.md](docs/adr/0001-modelagem-transacional-insert-only-ceap.md) — Aplica os 6 passos do Método de Decisão para a modelagem relacional insert-only e carimbos de tempo.
-- **Diários de Bordo da Squad:** [docs/diario/](docs/diario/) — Registros semanais da concepção e execução da Squad G8 (Semanas 01 a 05: 24/08 a 28/09/2026).
+- **Documento Explicativo da Pipeline E2:** [docs/PIPELINE_E2.md](docs/PIPELINE_E2.md) — Detalhamento técnico de ponta a ponta dos dois caminhos, do enriquecimento societário e da garantia de semântica.
+- **ADR-0001 (Decisão Arquitetural OLTP):** [docs/adr/0001-modelagem-transacional-insert-only-ceap.md](docs/adr/0001-modelagem-transacional-insert-only-ceap.md) — Modelagem relacional insert-only e carimbos de tempo.
+- **ADR-0002 (Decisão Arquitetural E2 - Ingestão e Lakehouse):** [docs/adr/0002-mecanismo-ingestao-e-formato-aberto.md](docs/adr/0002-mecanismo-ingestao-e-formato-aberto.md) — CDC vs Recarga Periódica (Opção Nula), Delta Lake e Compressão Zstandard.
+- **ADR-0003 (Decisão Arquitetural E2 - Enriquecimento Societário):** [docs/adr/0003-resolucao-grafo-societario-beneficiario-final.md](docs/adr/0003-resolucao-grafo-societario-beneficiario-final.md) — Resolução em Grafo da Cadeia Societária e Beneficiário Final (UBO).
+- **Diários de Bordo da Squad G8:** [docs/diario/](docs/diario/) — Registros semanais detalhados:
+  - Semanas 01 a 05: Concepção, modelagem transacional e Entrega E1 (24/08 a 28/09/2026).
+  - Semanas 06 e 07: Ingestão em lote, CDC, enriquecimento QSA da Receita e Entrega E2 (29/09 a 13/10/2026).
 - **Política de IA:** [AI-USAGE.md](AI-USAGE.md) — Registro transparente do uso de inteligência artificial.
+
