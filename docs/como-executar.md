@@ -98,7 +98,7 @@ Mais consultas em [Perguntas de gestão](consultas.md).
 docker exec -it ceap_postgres psql -U postgres -d ceap_oltp -c "EXPLAIN ANALYZE SELECT p.nome_parlamentar, d.sigla_partido_emissao, COUNT(*), SUM(d.valor_liquido) FROM despesa_ceap d JOIN parlamentar p ON p.id_deputado = d.id_deputado GROUP BY p.nome_parlamentar, d.sigla_partido_emissao ORDER BY SUM(d.valor_liquido) DESC LIMIT 10;"
 ```
 
-O resultado esperado é por volta de **112 ms** (ver [ADR-0001](adr/0001-modelagem-transacional-insert-only-ceap.md#medicao)).
+No ambiente da Squad, essa consulta levou cerca de **112 ms**; o tempo na sua máquina pode variar (ver [ADR-0001](adr/0001-modelagem-transacional-insert-only-ceap.md#medicao)).
 
 ## 7. Parar ou recriar o ambiente
 

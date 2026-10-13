@@ -20,8 +20,8 @@ sequenceDiagram
     R->>PG: aplica 001, 002 (pula as já aplicadas)
     M->>D: ensure_data_available(ANOS)
     D->>C: usa base-dados/Ano-AAAA.csv ou baixa o .zip
+    M->>I: ingest_csv_files(csv_files)
     loop para cada ano
-        M->>I: ingest_csv_files()
         I->>PG: TRUNCATE stg_ceap_raw
         I->>PG: COPY CSV → stg_ceap_raw
         I->>PG: INSERT parlamentar, mandato
@@ -78,11 +78,15 @@ Durante a conversão:
 
 - strings vazias viram `NULL` (`NULLIF(..., '')`) e textos são aparados com `TRIM`;
 - datas só são convertidas se casarem com `^\d{4}-\d{2}-\d{2}`;
-- valores ausentes recebem padrões explícitos (ex.: `'FORNECEDOR NÃO INFORMADO'`, `'SEM PARTIDO'`, legislatura `57`).
+- valores ausentes recebem padrões explícitos (ex.: `'FORNECEDOR NÃO INFORMADO'`, `'SEM PARTIDO'`, legislatura `57`);
+- linhas sem `nuDeputadoId` não entram em `despesa_ceap`.
+
+!!! warning "Competência ausente"
+    Se o mês ou o ano de competência vierem vazios no CSV, a carga assume **mês 1** e **ano 2023** (`COALESCE(..., 1)` e `COALESCE(..., 2023)`). Linhas nessa situação seriam contadas em janeiro de 2023, o que pode afetar as médias mensais.
 
 Cada ano é processado e confirmado em **uma transação** (`COMMIT` ao final do ano). No fim, o script imprime um resumo com as contagens de cada tabela e o volume total pago.
 
-## Desempenho medido
+## Desempenho medido (ambiente da Squad)
 
 | Etapa | Resultado |
 | :--- | :--- |

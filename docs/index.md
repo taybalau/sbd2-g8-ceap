@@ -82,7 +82,9 @@ Linhas por ano: 2023 → 232.747 · 2024 → 232.918 · 2025 → 209.080 · 2026
 | **E1** | Fonte transacional (OLTP) em PostgreSQL 16, ingestão reprodutível | :material-check-circle: Entregue em 28/09/2026 (tag `e1`) |
 | E2 | Replicação / captura de mudanças (CDC) | Planejada |
 | E3 | Transformações | Planejada |
-| E4 | Camada analítica | Planejada |
+| E4 | Ainda não detalhada | Planejada |
+
+A camada analítica também está prevista para as entregas E2 a E4, sem uma entrega específica definida até agora.
 
 Os detalhes da versão atual estão nas [Release Notes](release-notes.md).
 

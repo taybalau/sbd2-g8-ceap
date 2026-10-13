@@ -78,7 +78,7 @@ Como camada extra de segurança, `main.py` ainda tenta conectar até **15 vezes,
 :   Um único `docker compose up --build` leva de uma máquina limpa a um banco populado e validado, sem serviços pagos ou passos manuais.
 
 **Integridade contábil**
-:   Valores em `NUMERIC(12, 2)`, chaves estrangeiras `ON DELETE RESTRICT` e `CHECK` nas competências. Nenhum registro real é descartado.
+:   Valores em `NUMERIC(12, 2)`, chaves estrangeiras `ON DELETE RESTRICT` e `CHECK` nas competências. Campos que vêm vazios ou incompletos nos dados abertos são anuláveis, para que essas linhas sejam aceitas em vez de rejeitadas; só ficam de fora da carga as linhas sem identificador do deputado (`nuDeputadoId`).
 
 **Histórico imutável**
 :   A tabela de fatos `despesa_ceap` segue o padrão *insert-only* (livro-razão), o que prepara o terreno para CDC na E2. Ver [ADR-0001](adr/0001-modelagem-transacional-insert-only-ceap.md).

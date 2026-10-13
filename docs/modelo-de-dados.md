@@ -151,7 +151,7 @@ Separar esses três momentos permite responder tanto "quando o gasto aconteceu" 
 
 ## Inconsistências dos dados abertos e como foram tratadas
 
-O modelo aceita a realidade do dataset da Câmara **sem descartar registros**:
+O modelo foi ajustado para aceitar as particularidades do dataset da Câmara, em vez de rejeitar essas linhas. A única filtragem feita na carga é a de linhas sem identificador do deputado (`nuDeputadoId`), que não teriam a quem ser associadas.
 
 | Inconsistência encontrada | Tratamento |
 | :--- | :--- |
