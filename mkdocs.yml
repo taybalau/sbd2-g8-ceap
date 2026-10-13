@@ -45,11 +45,17 @@ nav:
   - Como executar: como-executar.md
   - Plataforma:
       - Arquitetura: arquitetura.md
-      - Modelo de dados: modelo-de-dados.md
-      - Pipeline de ingestão: pipeline.md
+      - "E1 · Modelo de dados (OLTP)": modelo-de-dados.md
+      - "E1 · Carga no OLTP": pipeline.md
+      - "E2 · Lakehouse e CDC": lakehouse.md
+      - "E2 · Enriquecimento societário": enriquecimento.md
       - Perguntas de gestão: consultas.md
   - Governança:
-      - "ADR-0001 — Modelagem insert-only": adr/0001-modelagem-transacional-insert-only-ceap.md
+      - Decisões (ADR):
+          - "ADR-0001 — Modelagem insert-only": adr/0001-modelagem-transacional-insert-only-ceap.md
+          - "ADR-0002 — Ingestão e formato aberto": adr/0002-mecanismo-ingestao-e-formato-aberto.md
+          - "ADR-0003 — Beneficiário final (UBO)": adr/0003-resolucao-grafo-societario-beneficiario-final.md
+      - "Documento técnico da E2": PIPELINE_E2.md
       - Diário de bordo:
           - diario/index.md
           - Semana 01: diario/semana-01.md
@@ -57,8 +63,10 @@ nav:
           - Semana 03: diario/semana-03.md
           - Semana 04: diario/semana-04.md
           - Semana 05: diario/semana-05.md
+          - Semana 06: diario/semana-06.md
+          - Semana 07: diario/semana-07.md
       - Uso de IA: ia.md
-  - Release Notes: release-notes.md
+  - "Release Notes (E1)": release-notes.md
 
 markdown_extensions:
   - admonition
@@ -69,6 +77,11 @@ markdown_extensions:
   - footnotes
   - toc:
       permalink: true
+      # Âncoras no mesmo formato do GitHub (mantém acentos), para que links
+      # internos dos documentos funcionem tanto no repositório quanto no site
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
   - pymdownx.details
   - pymdownx.highlight:
       anchor_linenums: true

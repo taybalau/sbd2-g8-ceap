@@ -1,6 +1,14 @@
 # Modelo de dados
 
-O esquema é criado pelas migrações [`001_create_tables.sql`](https://github.com/taybalau/sbd2-g8-ceap/blob/main/migrations/001_create_tables.sql) e [`002_create_indexes.sql`](https://github.com/taybalau/sbd2-g8-ceap/blob/main/migrations/002_create_indexes.sql).
+Esta página descreve o banco transacional (OLTP) no PostgreSQL. O esquema é criado pelas migrações:
+
+| Migração | Entrega | Conteúdo |
+| :--- | :---: | :--- |
+| [`001_create_tables.sql`](https://github.com/taybalau/sbd2-g8-ceap/blob/main/migrations/001_create_tables.sql) | E1 | Tabelas de domínio, staging e controle de migrações |
+| [`002_create_indexes.sql`](https://github.com/taybalau/sbd2-g8-ceap/blob/main/migrations/002_create_indexes.sql) | E1 | Índices para as perguntas de gestão |
+| [`003_setup_cdc_replication.sql`](https://github.com/taybalau/sbd2-g8-ceap/blob/main/migrations/003_setup_cdc_replication.sql) | E2 | Publicação lógica `ceap_cdc_publication`, `REPLICA IDENTITY FULL` em `despesa_ceap` e tabela de checkpoint do CDC |
+
+As tabelas da camada analítica (Delta Lake) estão descritas em [Lakehouse e CDC](lakehouse.md#a-tabela-analítica-despesa_ceap-delta) e [Enriquecimento societário](enriquecimento.md#tabelas-geradas-no-lakehouse).
 
 ## Diagrama entidade-relacionamento
 
@@ -127,6 +135,7 @@ A tabela de fatos. Cada linha é um documento fiscal **imutável**: não há `UP
 | :--- | :--- |
 | `schema_migrations` | Registra as migrações já aplicadas (`version`, `applied_at`) |
 | `stg_ceap_raw` | Staging `UNLOGGED` com as **32 colunas originais** do CSV, todas `TEXT` |
+| `cdc_consumer_checkpoint` | (E2) Até onde o consumidor CDC já processou: `consumer_id`, `last_lsn`, `last_applied_timestamp`, `total_events_processed` |
 
 ## Os três carimbos de tempo
 

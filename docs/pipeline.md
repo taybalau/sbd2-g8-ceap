@@ -1,4 +1,6 @@
-# Pipeline de ingestão
+# E1 · Carga no OLTP
+
+Esta página descreve como os CSVs da Câmara chegam ao banco transacional. O que acontece depois, na camada analítica, está em [Lakehouse e CDC](lakehouse.md).
 
 Os scripts ficam em [`scripts/`](https://github.com/taybalau/sbd2-g8-ceap/tree/main/scripts) e são executados pelo container `ceap_ingestion` a partir de `main.py`.
 
@@ -21,6 +23,8 @@ sequenceDiagram
     M->>D: ensure_data_available(ANOS)
     D->>C: usa base-dados/Ano-AAAA.csv ou baixa o .zip
     M->>I: ingest_csv_files(csv_files)
+    I->>PG: SELECT count(*) FROM despesa_ceap
+    Note over I,PG: 785.754 → pula a carga · mais que isso → TRUNCATE e recarrega
     loop para cada ano
         I->>PG: TRUNCATE stg_ceap_raw
         I->>PG: COPY CSV → stg_ceap_raw
@@ -42,6 +46,7 @@ sequenceDiagram
 3. Lê `ANOS` (padrão `2023,2024,2025,2026`) e garante os CSVs com `ensure_data_available`.
 4. Executa a carga com `ingest_csv_files`.
 5. Roda o [painel de validação](consultas.md) com as seis perguntas.
+6. Segue para as etapas da E2: carga em lote no lakehouse, enriquecimento societário, consultas de auditoria e testes de aceite (ver [Arquitetura](arquitetura.md#etapas-do-mainpy)).
 
 ### `run_migrations.py` — migrações versionadas
 
@@ -50,7 +55,7 @@ sequenceDiagram
 - Executa só os que ainda não estão registrados, e registra cada um após o sucesso.
 - Se uma migração falhar, faz `ROLLBACK` e interrompe a execução.
 
-Resultado: **as migrações são idempotentes**. Rodar duas vezes não recria nada.
+Resultado: **as migrações são idempotentes**. Rodar duas vezes não recria nada. A migração `003` (E2) também verifica se a publicação já existe antes de criá-la.
 
 ### `download_data.py` — download com cache
 
@@ -60,6 +65,14 @@ Resultado: **as migrações são idempotentes**. Rodar duas vezes não recria na
 - Pode ser executado sozinho: `python scripts/download_data.py`.
 
 ### `ingest_ceap.py` — carga em dois estágios
+
+**Verificação prévia (adicionada na E2).** Antes de carregar, o script conta as linhas de `despesa_ceap`:
+
+- **exatamente 785.754:** considera o banco já populado e pula a carga;
+- **mais de 785.754:** entende que houve execuções repetidas, faz `TRUNCATE ... RESTART IDENTITY CASCADE` e recarrega;
+- **menos que isso:** segue com a carga normalmente.
+
+O número 785.754 está fixo no código. Uma carga parcial (só alguns anos em `ANOS`) ou novos dados de 2026 publicados pela Câmara mudam a contagem, e nesse caso a verificação não protege contra duplicação.
 
 **Estágio 1: staging bruto.** O CSV (separador `;`) é carregado com `COPY ... FROM STDIN` na tabela `stg_ceap_raw`, que é `UNLOGGED` (não escreve no WAL) e tem só colunas `TEXT`. Esse é o caminho mais rápido possível para trazer os dados ao banco.
 
@@ -93,7 +106,7 @@ Cada ano é processado e confirmado em **uma transação** (`COMMIT` ao final do
 | Carga completa dos 4 anos (785.754 linhas, ~265 MB) | **~97,4 s** |
 | Consulta analítica principal (com índices) | **~112 ms** |
 
-Para comparação com as alternativas (tabela flat e CRUD), veja a seção de medição do [ADR-0001](adr/0001-modelagem-transacional-insert-only-ceap.md#medicao).
+Para comparação com as alternativas (tabela flat e CRUD), veja a seção de medição do [ADR-0001](adr/0001-modelagem-transacional-insert-only-ceap.md#medição).
 
 ## Correção relevante: duplicação de fornecedores
 

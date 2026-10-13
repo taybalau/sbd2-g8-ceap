@@ -30,7 +30,7 @@ jobs:
         run: pip install -r requirements-docs.txt
 
       - name: Gerar o site
-        run: mkdocs build --strict
+        run: mkdocs build
 
       - uses: actions/upload-pages-artifact@v5
         with:

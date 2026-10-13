@@ -90,4 +90,23 @@ ORDER BY tipo_dia DESC;
 
 ## Índices que sustentam as consultas
 
-Cada pergunta tem um índice dedicado em `despesa_ceap`. A relação completa está em [Modelo de dados → Índices](modelo-de-dados.md#indices-002_create_indexessql).
+Cada pergunta tem um índice dedicado em `despesa_ceap`. A relação completa está em [Modelo de dados → Índices](modelo-de-dados.md#índices-002_create_indexessql).
+
+## Na camada analítica (E2)
+
+A partir da E2, as mesmas análises podem ser feitas sobre a tabela Delta `despesa_ceap`, que já vem desnormalizada (com nome do parlamentar, fornecedor e descrição da subcota) e dispensa junções. Segundo o [ADR-0002](adr/0002-mecanismo-ingestao-e-formato-aberto.md), a agregação no DuckDB leva cerca de **18 ms**, contra 112 ms no OLTP.
+
+Exemplo, equivalente à pergunta 5 (consumo por partido):
+
+```sql
+SELECT sigla_partido_emissao,
+       COUNT(*)                     AS notas,
+       ROUND(SUM(valor_liquido), 2) AS total
+FROM delta_scan('lakehouse/delta/despesa_ceap')
+WHERE sigla_partido_emissao IS NOT NULL AND sigla_partido_emissao != ''
+GROUP BY sigla_partido_emissao
+ORDER BY total DESC
+LIMIT 3;
+```
+
+As consultas da pergunta ampliada (beneficiário final) estão em [Enriquecimento societário](enriquecimento.md#consultas-de-auditoria).
