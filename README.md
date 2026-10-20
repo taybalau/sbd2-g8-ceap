@@ -2,6 +2,8 @@
 ## Sistemas de Banco de Dados 2 (2026/2) — Universidade de Brasília (UnB)
 ### Squad G8
 
+📘 **Documentação completa:** https://taybalau.github.io/sbd2-g8-ceap/
+
 ---
 
 ### Integrantes da Squad G8

@@ -26,5 +26,5 @@
 
 ## O que foi decidido
 - Fechamento formal da Entrega E2 da Squad G8 cumprindo 100% do checklist de aceite no prazo de 13/10/2026.
-- Consolidação do documento técnico explicativo em [`docs/PIPELINE_E2.md`](../PIPELINE_E2.md), atualização do [`README.md`](../../README.md) e do [`AI-USAGE.md`](../../AI-USAGE.md).
+- Consolidação do documento técnico explicativo em [`docs/PIPELINE_E2.md`](../PIPELINE_E2.md), atualização do [`README.md`](https://github.com/taybalau/sbd2-g8-ceap/blob/main/README.md) e do [`AI-USAGE.md`](https://github.com/taybalau/sbd2-g8-ceap/blob/main/AI-USAGE.md).
 - Geração da tag `e2` no repositório público da Squad.
