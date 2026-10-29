@@ -55,6 +55,8 @@ nav:
           - "ADR-0001 — Modelagem insert-only": adr/0001-modelagem-transacional-insert-only-ceap.md
           - "ADR-0002 — Ingestão e formato aberto": adr/0002-mecanismo-ingestao-e-formato-aberto.md
           - "ADR-0003 — Beneficiário final (UBO)": adr/0003-resolucao-grafo-societario-beneficiario-final.md
+          - "ADR-0004 — Staging relacional vs Lakehouse direto": adr/0004-avaliacao-etl-relacional-postgres-vs-lakehouse-direto.md
+          - "ADR-0005 — Modelagem dimensional e SCD": adr/0005-modelagem-dimensional-granularidade-scd-ceap.md
       - "Documento técnico da E2": PIPELINE_E2.md
       - Diário de bordo:
           - diario/index.md
