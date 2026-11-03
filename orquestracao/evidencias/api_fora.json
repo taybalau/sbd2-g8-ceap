@@ -3,7 +3,8 @@
     "job": "transformacao",
     "particao": null,
     "sucesso": false,
-    "run_id": "da38cdbe-7fca-4955-b754-d0600b90ea77",
+    "run_id": "c0fee86a-0272-4ad9-bf50-6bebd0a718c4",
+    "dbt": {},
     "tentativas_extras": 3,
     "erros_das_tentativas": [
       "bronze_historico.ApiIndisponivel: API da Câmara inacessível em http://127.0.0.1:9/api/v2: ConnectionError",
@@ -27,16 +28,16 @@
   },
   "antes": {
     "gold_linhas": 622,
-    "gold_hash": "7d66273fd82d5a95ce8ef69aa58310cf",
-    "silver_fato_linhas": 785929,
-    "bronze_ceap_lancamento_versao": 10,
-    "bronze_camara_deputado_historico_versao": 2
+    "gold_hash": "8ad77df6e09756f7dff8955453e1bf8a",
+    "silver_fato_linhas": 795503,
+    "bronze_ceap_lancamento_versao": 4,
+    "bronze_camara_deputado_historico_versao": 0
   },
   "depois": {
     "gold_linhas": 622,
-    "gold_hash": "7d66273fd82d5a95ce8ef69aa58310cf",
-    "silver_fato_linhas": 785929,
-    "bronze_ceap_lancamento_versao": 10,
-    "bronze_camara_deputado_historico_versao": 2
+    "gold_hash": "8ad77df6e09756f7dff8955453e1bf8a",
+    "silver_fato_linhas": 795503,
+    "bronze_ceap_lancamento_versao": 4,
+    "bronze_camara_deputado_historico_versao": 0
   }
 }

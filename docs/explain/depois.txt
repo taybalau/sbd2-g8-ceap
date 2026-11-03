@@ -1,45 +1,45 @@
--- gerado em 2026-11-03T16:09:06Z a partir de docs/explain/consulta_desvio_otimizada.sql
+-- gerado em 2026-11-03T16:36:35Z a partir de docs/explain/consulta_desvio_otimizada.sql
 PostgreSQL 16.15 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit
 
                                                                                 QUERY PLAN                                                                                
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Limit  (cost=1964.81..1964.83 rows=7 width=44) (actual time=32.472..32.476 rows=15 loops=1)
+ Limit  (cost=1964.81..1964.83 rows=7 width=44) (actual time=34.641..34.646 rows=15 loops=1)
    Buffers: shared hit=206
    CTE gasto_mes
-     ->  Seq Scan on mv_gasto_mensal_deputado  (cost=0.00..502.31 rows=23630 width=19) (actual time=0.014..2.519 rows=23630 loops=1)
+     ->  Seq Scan on mv_gasto_mensal_deputado  (cost=0.00..502.31 rows=23630 width=19) (actual time=0.014..3.196 rows=23630 loops=1)
            Filter: (codigo_legislatura = 57)
            Rows Removed by Filter: 555
            Buffers: shared hit=200
-   ->  Sort  (cost=1462.50..1462.51 rows=7 width=44) (actual time=32.470..32.472 rows=15 loops=1)
+   ->  Sort  (cost=1462.50..1462.51 rows=7 width=44) (actual time=34.640..34.642 rows=15 loops=1)
          Sort Key: (sum((g.gasto - m.media))) DESC
          Sort Method: top-N heapsort  Memory: 26kB
          Buffers: shared hit=206
-         ->  GroupAggregate  (cost=1462.20..1462.40 rows=7 width=44) (actual time=24.536..32.315 rows=668 loops=1)
+         ->  GroupAggregate  (cost=1462.20..1462.40 rows=7 width=44) (actual time=26.884..34.489 rows=668 loops=1)
                Group Key: g.id_deputado
                Buffers: shared hit=203
-               ->  Sort  (cost=1462.20..1462.22 rows=7 width=68) (actual time=24.514..25.291 rows=23630 loops=1)
+               ->  Sort  (cost=1462.20..1462.22 rows=7 width=68) (actual time=26.861..27.647 rows=23630 loops=1)
                      Sort Key: g.id_deputado
                      Sort Method: quicksort  Memory: 1978kB
                      Buffers: shared hit=203
-                     ->  Hash Join  (cost=803.42..1462.11 rows=7 width=68) (actual time=14.862..21.428 rows=23630 loops=1)
+                     ->  Hash Join  (cost=803.42..1462.11 rows=7 width=68) (actual time=17.196..23.661 rows=23630 loops=1)
                            Hash Cond: (((g.sigla_uf)::text = (m.sigla_uf)::text) AND (g.ano_competencia = m.ano_competencia) AND (g.mes_competencia = m.mes_competencia))
                            Buffers: shared hit=200
-                           ->  CTE Scan on gasto_mes g  (cost=0.00..472.60 rows=23630 width=64) (actual time=0.015..1.405 rows=23630 loops=1)
+                           ->  CTE Scan on gasto_mes g  (cost=0.00..472.60 rows=23630 width=64) (actual time=0.016..1.386 rows=23630 loops=1)
                                  Buffers: shared hit=1
-                           ->  Hash  (cost=762.07..762.07 rows=2363 width=60) (actual time=14.825..14.826 rows=1260 loops=1)
+                           ->  Hash  (cost=762.07..762.07 rows=2363 width=60) (actual time=17.159..17.160 rows=1260 loops=1)
                                  Buckets: 4096  Batches: 1  Memory Usage: 94kB
                                  Buffers: shared hit=199
-                                 ->  Subquery Scan on m  (cost=708.90..762.07 rows=2363 width=60) (actual time=14.081..14.586 rows=1260 loops=1)
+                                 ->  Subquery Scan on m  (cost=708.90..762.07 rows=2363 width=60) (actual time=16.386..16.902 rows=1260 loops=1)
                                        Buffers: shared hit=199
-                                       ->  HashAggregate  (cost=708.90..738.44 rows=2363 width=60) (actual time=14.080..14.507 rows=1260 loops=1)
+                                       ->  HashAggregate  (cost=708.90..738.44 rows=2363 width=60) (actual time=16.386..16.826 rows=1260 loops=1)
                                              Group Key: gasto_mes.sigla_uf, gasto_mes.ano_competencia, gasto_mes.mes_competencia
                                              Batches: 1  Memory Usage: 625kB
                                              Buffers: shared hit=199
-                                             ->  CTE Scan on gasto_mes  (cost=0.00..472.60 rows=23630 width=60) (actual time=0.000..8.175 rows=23630 loops=1)
+                                             ->  CTE Scan on gasto_mes  (cost=0.00..472.60 rows=23630 width=60) (actual time=0.000..9.801 rows=23630 loops=1)
                                                    Buffers: shared hit=199
  Planning:
-   Buffers: shared hit=224
- Planning Time: 1.488 ms
- Execution Time: 33.007 ms
+   Buffers: shared hit=223
+ Planning Time: 1.444 ms
+ Execution Time: 35.186 ms
 (38 rows)
 

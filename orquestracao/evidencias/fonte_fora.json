@@ -3,12 +3,13 @@
     "job": "ingestao_ceap",
     "particao": "2026",
     "sucesso": false,
-    "run_id": "ac178cc3-1834-4e75-8b59-1c77962c532b",
+    "run_id": "04da6045-7a49-413d-b3b8-373dc5e43083",
+    "dbt": {},
     "tentativas_extras": 3,
     "erros_das_tentativas": [
-      "bronze.FonteIndisponivel: Fonte da Câmara indisponível: /tmp/fonte_vazia_l7h5qqbb/Ano-2026.csv não encontrado",
-      "bronze.FonteIndisponivel: Fonte da Câmara indisponível: /tmp/fonte_vazia_l7h5qqbb/Ano-2026.csv não encontrado",
-      "bronze.FonteIndisponivel: Fonte da Câmara indisponível: /tmp/fonte_vazia_l7h5qqbb/Ano-2026.csv não encontrado"
+      "bronze.FonteIndisponivel: Fonte da Câmara indisponível: /tmp/fonte_vazia_5bu4j53p/Ano-2026.csv não encontrado",
+      "bronze.FonteIndisponivel: Fonte da Câmara indisponível: /tmp/fonte_vazia_5bu4j53p/Ano-2026.csv não encontrado",
+      "bronze.FonteIndisponivel: Fonte da Câmara indisponível: /tmp/fonte_vazia_5bu4j53p/Ano-2026.csv não encontrado"
     ],
     "passos_com_falha": [
       {
@@ -25,17 +26,17 @@
   },
   "antes": {
     "gold_linhas": 622,
-    "gold_hash": "7d66273fd82d5a95ce8ef69aa58310cf",
-    "silver_fato_linhas": 785929,
-    "bronze_ceap_lancamento_versao": 10,
-    "bronze_camara_deputado_historico_versao": 2
+    "gold_hash": "8ad77df6e09756f7dff8955453e1bf8a",
+    "silver_fato_linhas": 795503,
+    "bronze_ceap_lancamento_versao": 4,
+    "bronze_camara_deputado_historico_versao": 0
   },
   "depois": {
     "gold_linhas": 622,
-    "gold_hash": "7d66273fd82d5a95ce8ef69aa58310cf",
-    "silver_fato_linhas": 785929,
-    "bronze_ceap_lancamento_versao": 10,
-    "bronze_camara_deputado_historico_versao": 2
+    "gold_hash": "8ad77df6e09756f7dff8955453e1bf8a",
+    "silver_fato_linhas": 795503,
+    "bronze_ceap_lancamento_versao": 4,
+    "bronze_camara_deputado_historico_versao": 0
   },
   "transformacao_disparada": false,
   "motivo": "sensor transforma_apos_ingestao só observa DagsterRunStatus.SUCCESS"

@@ -3,7 +3,7 @@
     "job": "ingestao_ceap",
     "particao": "2026",
     "sucesso": true,
-    "run_id": "05e9dc0f-c760-4135-9fed-7ec5a3d18f10",
+    "run_id": "67b3045d-8491-4301-9aab-a9299676fd62",
     "dbt": {},
     "tentativas_extras": 0,
     "erros_das_tentativas": [],
@@ -21,7 +21,7 @@
     "job": "transformacao",
     "particao": null,
     "sucesso": false,
-    "run_id": "efb7e1ee-a2ae-4135-b706-679d7b4b043d",
+    "run_id": "b4f6dec3-afcd-4364-a0a0-b99bb61f7068",
     "dbt": {
       "testes_reprovados": [
         "assert_negativo_somente_em_subcota_de_compensacao"
@@ -35,7 +35,8 @@
         "fct_gasto_mensal_parlamentar",
         "mart_concentracao_parlamentar",
         "mart_desvio_parlamentar",
-        "mart_desvio_partido"
+        "mart_desvio_partido",
+        "mart_freshness_gold"
       ],
       "testes_aprovados": 29
     },
@@ -44,7 +45,7 @@
     "passos_com_falha": [
       {
         "passo": "modelos_dbt",
-        "erro": "dagster_dbt.errors.DagsterDbtCliRuntimeError: The dbt CLI process with command\n\n`/home/pedrolucas0/Documentos/sbd2-g8-ceap/.venv/bin/dbt build --select fqn:*`\n\nfailed with exit code `1`. Check the stdout in the Dagster compute logs for the full information about the error, or view the dbt debug log:"
+        "erro": "dagster_dbt.errors.DagsterDbtCliRuntimeError: The dbt CLI process with command\n\n`/usr/local/bin/dbt build --select fqn:*`\n\nfailed with exit code `1`. Check the stdout in the Dagster compute logs for the full information about the error, or view the dbt debug log: /app/dbt_ceap/target/modelos_dbt-b4f"
       }
     ],
     "passos_iniciados": [
@@ -72,16 +73,16 @@
   },
   "antes": {
     "gold_linhas": 622,
-    "gold_hash": "47b503bb8f7703a1ffb98395f88231c4",
-    "silver_fato_linhas": 785929,
-    "bronze_ceap_lancamento_versao": 12,
-    "bronze_camara_deputado_historico_versao": 3
+    "gold_hash": "8ad77df6e09756f7dff8955453e1bf8a",
+    "silver_fato_linhas": 795503,
+    "bronze_ceap_lancamento_versao": 4,
+    "bronze_camara_deputado_historico_versao": 0
   },
   "depois": {
     "gold_linhas": 622,
-    "gold_hash": "47b503bb8f7703a1ffb98395f88231c4",
-    "silver_fato_linhas": 785929,
-    "bronze_ceap_lancamento_versao": 13,
-    "bronze_camara_deputado_historico_versao": 4
+    "gold_hash": "8ad77df6e09756f7dff8955453e1bf8a",
+    "silver_fato_linhas": 795503,
+    "bronze_ceap_lancamento_versao": 5,
+    "bronze_camara_deputado_historico_versao": 1
   }
 }
