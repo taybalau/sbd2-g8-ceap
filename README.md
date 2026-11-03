@@ -65,7 +65,7 @@ Documento completo: [docs/e3.md](docs/e3.md) · ADRs [0004](docs/adr/0004-avalia
 - **Painel (`painel/app.py`):** três blocos, um por parte da pergunta.
 
 ```bash
-docker compose --profile e3 up --build   # pipeline + Dagster (:3000) + painel (:8501)
+docker compose up --build   # E1/E2 + pipeline da E3 + Dagster (:3000) + painel (:8501)
 ```
 
 ---
@@ -88,7 +88,7 @@ docker compose up --build
 #### O que o comando executa automaticamente:
 1. Sobe o **PostgreSQL 16** com replicação lógica habilitada (`wal_level=logical`).
 2. Dispara o container de **ingestão**, que:
-   - Executa as migrações sequenciais em `migrations/` (`001`, `002` e `003`), criando tabelas, índices e publicação lógica de CDC.
+   - Executa as migrações sequenciais em `migrations/` (`001` a `004`), criando tabelas, índices, publicação lógica de CDC e a view de gasto mensal da E3.
    - Baixa (ou valida o cache local) dos CSVs oficiais da CEAP (2023 a 2026).
    - Realiza a carga transacional OLTP via `COPY` em tabela unlogged e normalização com integridade referencial.
    - Executa a **Ingestão em Lote para o Delta Lake** (`batch_ingest_lakehouse.py`).
@@ -99,6 +99,10 @@ docker compose up --build
      - Tratamento explícito de dados atrasados;
      - Semântica de entrega e deduplicação;
      - Auditoria analítica de grupos econômicos e sócios UBO.
+3. Quando a ingestão termina, sobe a **E3**:
+   - `e3-pipeline`: Bronze Delta a partir dos CSVs, histórico de deputados pela API da Câmara e `dbt build` (Silver e Gold com todos os testes), mais o `dbt source freshness`. Termina com erro se algum passo falhar.
+   - `e3-dagster` em http://localhost:3000: grafo, execuções, schedule diário e backfill por ano.
+   - `e3-painel` em http://localhost:8501: painel que responde à pergunta de gestão.
 
 ---
 

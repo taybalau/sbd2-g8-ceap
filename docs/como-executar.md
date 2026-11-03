@@ -31,18 +31,20 @@ O comando executa, em ordem:
 
 1. Constrói a imagem de ingestão.
 2. Sobe o PostgreSQL 16 com replicação lógica (`wal_level=logical`) e aguarda o `healthcheck` (`pg_isready`).
-3. Dispara o container `ceap_ingestion`, que aplica as migrações `001`, `002` e `003`.
+3. Dispara o container `ceap_ingestion`, que aplica as migrações `001` a `004`.
 4. Baixa os CSVs de 2023–2026 para `./base-dados/` (ou reaproveita os que já existirem).
 5. Carrega os dados no OLTP via `COPY` e normaliza ano a ano (ou pula essa etapa se o banco já estiver populado).
 6. Imprime o resumo do banco e o [painel de validação](consultas.md).
 7. Grava a tabela analítica em `./lakehouse/delta/despesa_ceap` ([carga em lote](lakehouse.md#caminho-1--ingestão-em-lote)).
 8. Grava as tabelas de [enriquecimento societário](enriquecimento.md) e imprime as consultas de auditoria.
 9. Roda os [5 testes de aceite da E2](lakehouse.md#testes-de-aceite).
+10. Quando a ingestão termina, o `ceap_e3_pipeline` monta a Bronze, busca o histórico dos deputados na API da Câmara e roda o `dbt build` com todos os testes ([E3](e3.md)). Se algum passo falhar, ele termina com erro e o Dagster e o painel não sobem.
+11. Sobe o **Dagster** em <http://localhost:3000> e o **painel** em <http://localhost:8501>.
 
 !!! tip "Rodar em segundo plano"
     ```bash
     docker compose up --build -d
-    docker compose logs -f ingestion
+    docker compose logs -f ingestion e3-pipeline
     ```
 
 ## 3. Confirmar que terminou com sucesso
@@ -59,6 +61,8 @@ Volume Total Pago na Legislatura:   R$ 869,398,245.27
 As linhas de resumo do OLTP só aparecem quando a carga é feita; numa execução em que o banco já estava populado, o log mostra `Banco OLTP já está perfeitamente populado com 785.754 despesas. Pulando recarga.`
 
 O container `ceap_ingestion` encerra sozinho no final; o `ceap_postgres` continua rodando.
+
+Na E3, o `ceap_e3_pipeline` também encerra sozinho, e com código 0 só quando a Gold foi gerada. Em seguida, `ceap_e3_dagster` e `ceap_e3_painel` ficam no ar. A subida completa leva de 15 a 20 minutos em máquina limpa, a maior parte no download dos CSVs e nas ~860 chamadas à API da Câmara.
 
 ## 4. Conectar ao banco
 
