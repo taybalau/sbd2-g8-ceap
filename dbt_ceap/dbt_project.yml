@@ -15,6 +15,9 @@ vars:
   # Medido em 2026-11-03: com corte em set/2026, jun/2026 tinha 54% do gasto típico e
   # set/2026 apenas 7%. Com 4 meses de maturação, a última competência fechada é mai/2026.
   meses_maturacao: 4
+  # SLA da Gold (docs/e3.md, seção Freshness e SLA): no máximo 26 h entre a ingestão do CSV
+  # e a Gold publicada. A ingestão diária roda às 06:00; 2 h de margem para retry e reprocesso.
+  sla_horas_gold: 26
   codigo_legislatura: 57
 
 models:

@@ -21,10 +21,11 @@
 | Cenário | Resultado |
 | :--- | :--- |
 | Falha transitória na leitura do CSV (2 tentativas) | Retry absorveu as falhas; run concluído com sucesso |
-| Fonte da Câmara indisponível | Falha após 3 retries; Bronze e Gold inalteradas. A transformação não roda porque o sensor só reage a ingestão bem-sucedida (configurado no Dagster; o script de demonstração não executa sensores) |
+| Fonte da Câmara indisponível | Falha após 3 retries; Bronze e Gold inalteradas. A transformação não roda porque o sensor só reage a ingestão bem-sucedida (o disparo do sensor após sucesso foi observado no backfill pelo Dagster) |
 | API de histórico indisponível | Falha após 3 retries; dbt não iniciou; SCD e Gold inalterados |
 | Dado sujo injetado (combustível negativo) | Teste reprovado; os 4 modelos Gold foram pulados e mantiveram o estado anterior |
 | Backfill de 2023 e 2024 | Só essas partições foram reprocessadas; contagem total igual; Gold com hash idêntico |
+| Backfill real pelo Dagster (2023 e 2024) | O daemon executou as duas partições, o sensor disparou a transformação depois de cada uma e a Gold saiu com hash idêntico |
 
 ## 2. Problemas encontrados nos dados da fonte
 

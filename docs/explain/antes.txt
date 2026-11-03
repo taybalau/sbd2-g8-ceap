@@ -1,0 +1,60 @@
+-- gerado em 2026-11-03T16:36:34Z a partir de docs/explain/consulta_desvio.sql
+PostgreSQL 16.15 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit
+
+                                                                                QUERY PLAN                                                                                
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=92949.80..92949.84 rows=15 width=44) (actual time=256.678..256.743 rows=15 loops=1)
+   Buffers: shared hit=14477 read=6942, temp read=235 written=444
+   CTE gasto_mes
+     ->  Finalize GroupAggregate  (cost=66077.21..88021.04 rows=79550 width=43) (actual time=175.517..225.057 rows=23630 loops=1)
+           Group Key: despesa_ceap.id_deputado, despesa_ceap.sigla_uf_emissao, despesa_ceap.ano_competencia, despesa_ceap.mes_competencia
+           Buffers: shared hit=14474 read=6942, temp read=235 written=444
+           ->  Gather Merge  (cost=66077.21..84640.17 rows=159100 width=43) (actual time=175.499..194.199 rows=61960 loops=1)
+                 Workers Planned: 2
+                 Workers Launched: 2
+                 Buffers: shared hit=14474 read=6942, temp read=235 written=444
+                 ->  Sort  (cost=65077.18..65276.06 rows=79550 width=43) (actual time=171.079..173.460 rows=20653 loops=3)
+                       Sort Key: despesa_ceap.id_deputado, despesa_ceap.sigla_uf_emissao, despesa_ceap.ano_competencia, despesa_ceap.mes_competencia
+                       Sort Method: quicksort  Memory: 2865kB
+                       Buffers: shared hit=14474 read=6942, temp read=235 written=444
+                       Worker 0:  Sort Method: quicksort  Memory: 2858kB
+                       Worker 1:  Sort Method: quicksort  Memory: 2875kB
+                       ->  Partial HashAggregate  (cost=51344.27..56151.98 rows=79550 width=43) (actual time=143.371..156.780 rows=20653 loops=3)
+                             Group Key: despesa_ceap.id_deputado, despesa_ceap.sigla_uf_emissao, despesa_ceap.ano_competencia, despesa_ceap.mes_competencia
+                             Planned Partitions: 4  Batches: 5  Memory Usage: 8241kB  Disk Usage: 776kB
+                             Buffers: shared hit=14430 read=6942, temp read=235 written=444
+                             Worker 0:  Batches: 5  Memory Usage: 8241kB  Disk Usage: 704kB
+                             Worker 1:  Batches: 5  Memory Usage: 8241kB  Disk Usage: 736kB
+                             ->  Parallel Seq Scan on despesa_ceap  (cost=0.00..25515.24 rows=325405 width=17) (actual time=0.035..43.399 rows=260718 loops=3)
+                                   Filter: (codigo_legislatura = 57)
+                                   Rows Removed by Filter: 4450
+                                   Buffers: shared hit=14430 read=6942
+   ->  Sort  (cost=4928.76..4928.95 rows=79 width=44) (actual time=256.677..256.679 rows=15 loops=1)
+         Sort Key: (sum((g.gasto - m.media))) DESC
+         Sort Method: top-N heapsort  Memory: 26kB
+         Buffers: shared hit=4894 read=2462, temp read=83 written=157
+         ->  GroupAggregate  (cost=4924.65..4926.82 rows=79 width=44) (actual time=248.935..256.529 rows=668 loops=1)
+               Group Key: g.id_deputado
+               Buffers: shared hit=4891 read=2462, temp read=83 written=157
+               ->  Sort  (cost=4924.65..4924.84 rows=79 width=68) (actual time=248.912..249.649 rows=23630 loops=1)
+                     Sort Key: g.id_deputado
+                     Sort Method: quicksort  Memory: 1978kB
+                     Buffers: shared hit=4891 read=2462, temp read=83 written=157
+                     ->  Hash Join  (cost=2704.70..4922.16 rows=79 width=68) (actual time=239.422..245.814 rows=23630 loops=1)
+                           Hash Cond: (((g.sigla_uf)::text = (m.sigla_uf)::text) AND (g.ano_competencia = m.ano_competencia) AND (g.mes_competencia = m.mes_competencia))
+                           Buffers: shared hit=4891 read=2462, temp read=83 written=157
+                           ->  CTE Scan on gasto_mes g  (cost=0.00..1591.00 rows=79550 width=64) (actual time=175.520..176.918 rows=23630 loops=1)
+                                 Buffers: shared hit=4891 read=2462, temp read=83 written=157
+                           ->  Hash  (cost=2565.49..2565.49 rows=7955 width=60) (actual time=63.811..63.812 rows=1260 loops=1)
+                                 Buckets: 8192  Batches: 1  Memory Usage: 126kB
+                                 ->  Subquery Scan on m  (cost=2386.50..2565.49 rows=7955 width=60) (actual time=62.973..63.558 rows=1260 loops=1)
+                                       ->  HashAggregate  (cost=2386.50..2485.94 rows=7955 width=60) (actual time=62.972..63.478 rows=1260 loops=1)
+                                             Group Key: gasto_mes.sigla_uf, gasto_mes.ano_competencia, gasto_mes.mes_competencia
+                                             Batches: 1  Memory Usage: 913kB
+                                             ->  CTE Scan on gasto_mes  (cost=0.00..1591.00 rows=79550 width=60) (actual time=0.001..55.686 rows=23630 loops=1)
+ Planning:
+   Buffers: shared hit=339
+ Planning Time: 2.457 ms
+ Execution Time: 258.048 ms
+(53 rows)
+

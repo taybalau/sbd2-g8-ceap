@@ -1,11 +1,12 @@
 # Registro de Uso de Inteligência Artificial (AI-USAGE)
 
-Em conformidade com as diretrizes e a Política de Uso de Inteligência Artificial da disciplina de **Sistemas de Banco de Dados 2 (2026/2) — Universidade de Brasília (UnB)**, a **Squad G8** declara o uso transparente de assistentes de inteligência artificial durante o desenvolvimento das Entregas E1 e E2.
+Em conformidade com as diretrizes e a Política de Uso de Inteligência Artificial da disciplina de **Sistemas de Banco de Dados 2 (2026/2) — Universidade de Brasília (UnB)**, a **Squad G8** declara o uso transparente de assistentes de inteligência artificial durante o desenvolvimento das Entregas E1, E2 e E3.
 
 ---
 
 ### 1. Ferramentas e Modelos Utilizados
 - **Google Antigravity (com modelo Gemini 3.8 Flash)**: Utilizado como assistente de engenharia de dados, design de arquitetura e pair programming no ambiente de desenvolvimento.
+- **Claude Code**: Utilizado como assistente de programação durante a Entrega E3, apoiando a implementação e revisão do pipeline, da orquestração, do painel e da documentação. As sugestões foram avaliadas e validadas pelos integrantes da Squad antes de serem incorporadas.
 
 ---
 
@@ -20,6 +21,7 @@ Em conformidade com as diretrizes e a Política de Uso de Inteligência Artifici
 | **Enriquecimento Societário da Receita (E2)** | Auxílio na estruturação do algoritmo recursivo de identificação do Beneficiário Final (UBO) e grupos econômicos (`scripts/enrich_receita_socios.py`). |
 | **Roteiro de Testes de Aceite (E2)** | Apoio na construção da suíte automatizada de validação de idempotência, dados atrasados e mutação OLTP (`scripts/test_e2_pipeline.py`). |
 | **Documentação Técnica e ADRs (E1 e E2)** | Auxílio na formatação e consolidação das decisões de engenharia segundo o método de 6 etapas de Nygard (`ADR-0001` e `ADR-0002`), além do guia técnico `docs/PIPELINE_E2.md`. |
+| **Lakehouse, transformações e orquestração (E3)** | Apoio com Claude Code na implementação e revisão dos modelos dbt, ingestão Bronze, jobs e assets do Dagster, testes de falha e backfill, painel analítico e documentação/ADRs da E3. |
 
 ---
 

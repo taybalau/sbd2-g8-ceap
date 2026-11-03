@@ -1,6 +1,6 @@
 # 0006 — Orquestração com Dagster: retry, falha controlada e backfill por partição
 
-- **Status:** proposto (aguarda revisão da squad)
+- **Status:** aceito
 - **Data:** 2026-11-03
 - **Decisores:** Squad G8
 

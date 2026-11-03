@@ -8,6 +8,7 @@ RUN pip install --no-cache-dir -r requirements-e3.txt
 RUN python -c "import duckdb; duckdb.connect().execute('INSTALL delta')"
 COPY ingestao/ /app/ingestao/
 COPY dbt_ceap/ /app/dbt_ceap/
-COPY orquestracao/definitions.py orquestracao/demo_falhas.py /app/orquestracao/
+COPY orquestracao/definitions.py orquestracao/demo_falhas.py orquestracao/backfill_dagster.py \
+     orquestracao/dagster.yaml /app/orquestracao/
 COPY painel/ /app/painel/
 RUN mkdir -p $DAGSTER_HOME && cd dbt_ceap && DBT_PROFILES_DIR=. dbt parse --quiet

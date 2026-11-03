@@ -222,8 +222,7 @@ Esta decisão será revisada caso:
 
 ## 9. Revisão de 2026-11-03: o que a implementação mostrou e o que mudou
 
-> Status desta revisão: **proposta**. Precisa ser revisada e aprovada por um integrante que não
-> a redigiu.
+> Status desta revisão: **aceita pela Squad G8 em 2026-11-03**, após revisão dos resultados da implementação e dos dados publicados pela Câmara.
 
 A implementação em `dbt_ceap/` mediu os dados e desmentiu três premissas deste ADR.
 

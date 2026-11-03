@@ -40,6 +40,10 @@ def carregar():
             "ruptura": con.execute(
                 "select * from silver.ruptura_publicacao order by competencia_inicio").df(),
             "atualizado": con.execute("select max(ingerido_em) from silver.fct_lancamento_ceap").fetchone()[0],
+            "sla": con.execute("""
+                select sla_horas,
+                       date_diff('second', ingerido_em_mais_recente, current_timestamp) / 3600.0
+                from gold.mart_freshness_gold where tabela_consumo = 'mart_desvio_parlamentar'""").fetchone(),
         }
     finally:
         con.close()
@@ -77,6 +81,12 @@ st.caption(
     f"Comparação mês a mês com a média dos deputados da **mesma UF** (o teto da cota varia por estado). "
     f"Janela comparável: **{mes(ini)} a {mes(fim)}** ({n_meses} meses). "
     f"Dados da Câmara ingeridos em {pd.Timestamp(d['atualizado']).strftime('%d/%m/%Y %H:%M')}.")
+sla_horas, idade_horas = d["sla"]
+if idade_horas > sla_horas:
+    st.warning(f"Dados com {idade_horas:.0f} h desde a última ingestão: acima do SLA de {sla_horas} h. "
+               "A ingestão diária pode ter falhado; confira o Dagster.")
+else:
+    st.caption(f"Freshness: {idade_horas:.1f} h desde a última ingestão (SLA: até {sla_horas} h).")
 
 with st.expander("Por que a janela termina antes de 2026?", expanded=False):
     rup = d["ruptura"].iloc[0] if len(d["ruptura"]) else None

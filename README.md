@@ -56,16 +56,17 @@ A segunda etapa estabelece a movimentação analítica de dados sem lock-in, atr
 
 ### 3.1 Arquitetura da Entrega E3: Esquema Estrela, Testes de Domínio, Orquestração e Painel
 
-Documento completo: [docs/e3.md](docs/e3.md) · ADRs [0004](docs/adr/0004-avaliacao-etl-relacional-postgres-vs-lakehouse-direto.md), [0005](docs/adr/0005-modelagem-dimensional-granularidade-scd-ceap.md) (com revisão de 2026-11-03) e [0006](docs/adr/0006-orquestracao-falha-controlada-e-backfill.md).
+Documento completo: [docs/e3.md](docs/e3.md) · ADRs [0004](docs/adr/0004-avaliacao-etl-relacional-postgres-vs-lakehouse-direto.md), [0005](docs/adr/0005-modelagem-dimensional-granularidade-scd-ceap.md) (com revisão de 2026-11-03), [0006](docs/adr/0006-orquestracao-falha-controlada-e-backfill.md) e [0007](docs/adr/0007-ferramenta-do-painel-analitico.md) · Consulta otimizada (EXPLAIN antes e depois): [docs/explain/](docs/explain/README.md).
 
 - **Direct-to-Lakehouse:** CSV da Câmara → Bronze Delta (`ingestao/bronze.py`, partição por ano, idempotente) + histórico oficial de deputados via API (`ingestao/bronze_historico.py`).
 - **dbt (`dbt_ceap/`):** fato `fct_lancamento_ceap` com grão declarado (uma linha por lançamento publicado), `dim_parlamentar_scd` (SCD tipo 2 a partir do histórico oficial, porque o CSV regrava o partido atual) e marts Gold que respondem à pergunta de gestão.
 - **Testes de domínio:** negativo fora de subcota de compensação, salto de série por subcota, subcota que some entre anos, reconciliação Bronze ↔ fato ↔ Gold e regressão do SCD com caso real.
 - **Dagster (`orquestracao/`):** retry com backoff, falha de fonte sem propagação e backfill por ano. Tudo isso é exercitado por `orquestracao/demo_falhas.py`.
-- **Painel (`painel/app.py`):** três blocos, um por parte da pergunta.
+- **Painel (`painel/app.py`):** três blocos, um por parte da pergunta (Streamlit; justificativa no ADR-0007).
+- **Freshness e SLA:** Gold publicada até 26 h após a ingestão (`gold.mart_freshness_gold`, teste `assert_gold_dentro_do_sla`).
 
 ```bash
-docker compose --profile e3 up --build   # pipeline + Dagster (:3000) + painel (:8501)
+docker compose up --build   # E1/E2 + pipeline da E3 + Dagster (:3000) + painel (:8501)
 ```
 
 ---
@@ -88,7 +89,7 @@ docker compose up --build
 #### O que o comando executa automaticamente:
 1. Sobe o **PostgreSQL 16** com replicação lógica habilitada (`wal_level=logical`).
 2. Dispara o container de **ingestão**, que:
-   - Executa as migrações sequenciais em `migrations/` (`001`, `002` e `003`), criando tabelas, índices e publicação lógica de CDC.
+   - Executa as migrações sequenciais em `migrations/` (`001` a `004`), criando tabelas, índices, publicação lógica de CDC e a view de gasto mensal da E3.
    - Baixa (ou valida o cache local) dos CSVs oficiais da CEAP (2023 a 2026).
    - Realiza a carga transacional OLTP via `COPY` em tabela unlogged e normalização com integridade referencial.
    - Executa a **Ingestão em Lote para o Delta Lake** (`batch_ingest_lakehouse.py`).
@@ -99,6 +100,10 @@ docker compose up --build
      - Tratamento explícito de dados atrasados;
      - Semântica de entrega e deduplicação;
      - Auditoria analítica de grupos econômicos e sócios UBO.
+3. Quando a ingestão termina, sobe a **E3**:
+   - `e3-pipeline`: Bronze Delta a partir dos CSVs, histórico de deputados pela API da Câmara e `dbt build` (Silver e Gold com todos os testes), mais o `dbt source freshness`. Termina com erro se algum passo falhar.
+   - `e3-dagster` em http://localhost:3000: grafo, execuções, schedule diário e backfill por ano.
+   - `e3-painel` em http://localhost:8501: painel que responde à pergunta de gestão.
 
 ---
 

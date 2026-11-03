@@ -51,6 +51,7 @@ nav:
       - "E2 · Enriquecimento societário": enriquecimento.md
       - "E3 · Estrela, testes, orquestração e painel": e3.md
       - "E3 · Erros tratados": e3-erros-tratados.md
+      - "E3 · Consulta otimizada (EXPLAIN)": explain/README.md
       - Perguntas de gestão: consultas.md
   - Governança:
       - Decisões (ADR):
@@ -60,6 +61,7 @@ nav:
           - "ADR-0004 — Staging relacional vs Lakehouse direto": adr/0004-avaliacao-etl-relacional-postgres-vs-lakehouse-direto.md
           - "ADR-0005 — Modelagem dimensional e SCD": adr/0005-modelagem-dimensional-granularidade-scd-ceap.md
           - "ADR-0006 — Orquestração e falha controlada": adr/0006-orquestracao-falha-controlada-e-backfill.md
+          - "ADR-0007 — Ferramenta do painel": adr/0007-ferramenta-do-painel-analitico.md
       - "Documento técnico da E2": PIPELINE_E2.md
       - Diário de bordo:
           - diario/index.md
@@ -70,6 +72,7 @@ nav:
           - Semana 05: diario/semana-05.md
           - Semana 06: diario/semana-06.md
           - Semana 07: diario/semana-07.md
+          - Semanas 08 a 10: diario/semana-08.md
       - Uso de IA: ia.md
   - "Release Notes (E1)": release-notes.md
 

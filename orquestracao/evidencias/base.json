@@ -4,53 +4,141 @@
       "job": "ingestao_ceap",
       "particao": "2023",
       "sucesso": true,
-      "run_id": "4191d92b-38cd-46ab-b4ba-2de34c09d46c",
+      "run_id": "715920b2-a650-4d56-ad0f-a954f603aae2",
+      "dbt": {},
       "tentativas_extras": 0,
+      "erros_das_tentativas": [],
       "passos_com_falha": [],
-      "passos_pulados": []
+      "passos_iniciados": [
+        "bronze__ceap_lancamento"
+      ],
+      "passos_nao_executados": [],
+      "assets_materializados": [
+        "bronze/ceap_lancamento"
+      ],
+      "checks_dbt_reprovados": []
     },
     {
       "job": "ingestao_ceap",
       "particao": "2024",
       "sucesso": true,
-      "run_id": "3ca03f79-1856-4707-aaa9-e75ed162dab6",
+      "run_id": "bce53968-7f15-4c18-a2d7-0b6516094070",
+      "dbt": {},
       "tentativas_extras": 0,
+      "erros_das_tentativas": [],
       "passos_com_falha": [],
-      "passos_pulados": []
+      "passos_iniciados": [
+        "bronze__ceap_lancamento"
+      ],
+      "passos_nao_executados": [],
+      "assets_materializados": [
+        "bronze/ceap_lancamento"
+      ],
+      "checks_dbt_reprovados": []
     },
     {
       "job": "ingestao_ceap",
       "particao": "2025",
       "sucesso": true,
-      "run_id": "0e72e9e7-7b80-4300-b6cd-ad8ed97394fc",
+      "run_id": "f3f96f85-2519-45a8-a8c9-f376b74f69dd",
+      "dbt": {},
       "tentativas_extras": 0,
+      "erros_das_tentativas": [],
       "passos_com_falha": [],
-      "passos_pulados": []
+      "passos_iniciados": [
+        "bronze__ceap_lancamento"
+      ],
+      "passos_nao_executados": [],
+      "assets_materializados": [
+        "bronze/ceap_lancamento"
+      ],
+      "checks_dbt_reprovados": []
     },
     {
       "job": "ingestao_ceap",
       "particao": "2026",
       "sucesso": true,
-      "run_id": "c1d49373-135c-4d67-a52a-ae65006818f3",
+      "run_id": "cb952ca0-257c-406f-bcf6-5dd1b0b0b30a",
+      "dbt": {},
       "tentativas_extras": 0,
+      "erros_das_tentativas": [],
       "passos_com_falha": [],
-      "passos_pulados": []
+      "passos_iniciados": [
+        "bronze__ceap_lancamento"
+      ],
+      "passos_nao_executados": [],
+      "assets_materializados": [
+        "bronze/ceap_lancamento"
+      ],
+      "checks_dbt_reprovados": []
     },
     {
       "job": "transformacao",
       "particao": null,
       "sucesso": true,
-      "run_id": "37b850c7-7277-48f9-8ae3-928ea25746dc",
+      "run_id": "dd35c52c-3bf0-4684-9475-d232836d27ee",
+      "dbt": {
+        "testes_reprovados": [],
+        "testes_com_aviso": [
+          "assert_deputado_ativo_nao_some_no_meio",
+          "assert_divergencia_csv_vs_historico",
+          "relationships_fct_lancamento_ceap_data_emissao__data__ref_dim_calendario_"
+        ],
+        "modelos_pulados": [],
+        "testes_aprovados": 38
+      },
       "tentativas_extras": 0,
+      "erros_das_tentativas": [],
       "passos_com_falha": [],
-      "passos_pulados": []
+      "passos_iniciados": [
+        "bronze__camara_deputado_historico",
+        "modelos_dbt"
+      ],
+      "passos_nao_executados": [],
+      "assets_materializados": [
+        "bronze/camara_deputado_historico",
+        "gold/fct_gasto_mensal_parlamentar",
+        "gold/mart_concentracao_parlamentar",
+        "gold/mart_desvio_parlamentar",
+        "gold/mart_desvio_partido",
+        "gold/mart_freshness_gold",
+        "silver/dim_calendario",
+        "silver/dim_categoria_despesa",
+        "silver/dim_fornecedor",
+        "silver/dim_parlamentar_scd",
+        "silver/fct_lancamento_ceap",
+        "silver/int_parlamentar__versoes",
+        "silver/regra_subcota",
+        "silver/ruptura_publicacao",
+        "silver/stg_camara__deputado_evento",
+        "silver/stg_ceap__lancamento"
+      ],
+      "checks_dbt_reprovados": [
+        "assert_deputado_ativo_nao_some_no_meio",
+        "relationships_fct_lancamento_ceap_data_emissao__data__ref_dim_calendario_"
+      ]
     }
   ],
+  "freshness_fontes": {
+    "comando_ok": true,
+    "fontes": {
+      "camara_deputado_historico": {
+        "status": "pass",
+        "idade_horas": 0.0,
+        "carregado_em": "2026-11-03T16:34:48+00:00"
+      },
+      "ceap_lancamento": {
+        "status": "pass",
+        "idade_horas": 0.0,
+        "carregado_em": "2026-11-03T16:34:43+00:00"
+      }
+    }
+  },
   "estado": {
     "gold_linhas": 622,
-    "gold_hash": "99ea9dfd824ae5d8af1348b2dedeefb8",
-    "silver_fato_linhas": 785929,
-    "bronze_ceap_lancamento_versao": 8,
-    "bronze_camara_deputado_historico_versao": 1
+    "gold_hash": "8ad77df6e09756f7dff8955453e1bf8a",
+    "silver_fato_linhas": 795503,
+    "bronze_ceap_lancamento_versao": 3,
+    "bronze_camara_deputado_historico_versao": 0
   }
 }

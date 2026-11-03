@@ -45,7 +45,6 @@ services:
       - ceap_network
 
   e3-pipeline:
-    profiles: ["e3"]
     build: {context: ., dockerfile: docker/e3/Dockerfile}
     container_name: ceap_e3_pipeline
     command: python orquestracao/demo_falhas.py base
@@ -58,10 +57,9 @@ services:
       ingestion: {condition: service_completed_successfully}
 
   e3-dagster:
-    profiles: ["e3"]
     build: {context: ., dockerfile: docker/e3/Dockerfile}
     container_name: ceap_e3_dagster
-    command: dagster dev -f orquestracao/definitions.py -h 0.0.0.0 -p 3000
+    command: sh -c "cp orquestracao/dagster.yaml $$DAGSTER_HOME/dagster.yaml && dagster dev -f orquestracao/definitions.py -h 0.0.0.0 -p 3000"
     ports: ["3000:3000"]
     volumes:
       - ./base-dados:/app/base-dados
@@ -71,7 +69,6 @@ services:
       e3-pipeline: {condition: service_completed_successfully}
 
   e3-painel:
-    profiles: ["e3"]
     build: {context: ., dockerfile: docker/e3/Dockerfile}
     container_name: ceap_e3_painel
     command: streamlit run painel/app.py --server.address 0.0.0.0 --server.port 8501

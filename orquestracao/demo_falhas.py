@@ -115,11 +115,28 @@ def _limpa_contadores(lake: Path = LAKE):
 
 
 # ----------------------------------------------------------------- cenários
+def _freshness_fontes() -> dict:
+    """`dbt source freshness`: idade de cada source da Bronze contra warn_after/error_after."""
+    dbt_dir = RAIZ / "dbt_ceap"
+    p = subprocess.run([str(Path(sys.executable).with_name("dbt")), "source", "freshness"],
+                       cwd=dbt_dir, env={**os.environ, "DBT_PROFILES_DIR": str(dbt_dir)},
+                       capture_output=True, text=True)
+    arq = dbt_dir / "target" / "sources.json"
+    fontes = {}
+    if arq.exists():
+        for x in json.loads(arq.read_text())["results"]:
+            fontes[x["unique_id"].split(".")[-1]] = {
+                "status": x["status"], "idade_horas": round(x.get("age", 0) / 3600, 2),
+                "carregado_em": x.get("max_loaded_at")}
+    return {"comando_ok": p.returncode == 0, "fontes": fontes}
+
+
 def cenario_base():
     """Execução normal de ponta a ponta (estado de referência)."""
     r = [_sub("ingestao_ceap", a) for a in ("2023", "2024", "2025", "2026")]
     r.append(_sub("transformacao"))
-    return {"execucoes": r, "estado": _impressao_digital(LAKE)}
+    return {"execucoes": r, "freshness_fontes": _freshness_fontes(),
+            "estado": _impressao_digital(LAKE)}
 
 
 def cenario_retry():

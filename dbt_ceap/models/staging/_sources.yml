@@ -7,6 +7,10 @@ sources:
         description: "Uma linha por linha dos CSVs anuais da CEAP publicados pela Câmara. Coluna cpf descartada (LGPD)."
         meta:
           external_location: "delta_scan('{{ env_var(\"LAKEHOUSE_PATH\", \"../lakehouse\") }}/bronze/ceap_lancamento')"
+        freshness:
+          warn_after: {count: 26, period: hour}
+          error_after: {count: 48, period: hour}
+        loaded_at_field: "_ingerido_em::timestamptz"
         columns:
           - name: _hash_lancamento
             description: "md5 de todos os campos de origem; identifica a linha publicada."
