@@ -63,6 +63,7 @@ nav:
           - "ADR-0006 — Orquestração e falha controlada": adr/0006-orquestracao-falha-controlada-e-backfill.md
           - "ADR-0007 — Ferramenta do painel": adr/0007-ferramenta-do-painel-analitico.md
       - "Documento técnico da E2": PIPELINE_E2.md
+      - "Documento técnico da E3": E3_MODEL.md
       - Diário de bordo:
           - diario/index.md
           - Semana 01: diario/semana-01.md
