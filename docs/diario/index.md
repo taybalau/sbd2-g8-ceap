@@ -1,6 +1,6 @@
 # Diário de bordo
 
-Registros semanais da Squad G8 durante as Entregas E1 e E2, cada um com três seções: **o que foi medido**, **o que surpreendeu** e **o que foi decidido**.
+Registros semanais da Squad G8 durante as Entregas E1, E2 e E3, cada um com três seções: **o que foi medido**, **o que surpreendeu** e **o que foi decidido**.
 
 | Semana | Data | Destaque |
 | :--- | :--- | :--- |
@@ -11,5 +11,6 @@ Registros semanais da Squad G8 durante as Entregas E1 e E2, cada um com três se
 | [Semana 05](semana-05.md) | 21–28/09/2026 | Implementação, métricas reais e entrega da E1 (tag `e1`) |
 | [Semana 06](semana-06.md) | 29/09–05/10/2026 | Delta Lake + Zstandard, carga em lote e início do enriquecimento societário |
 | [Semana 07](semana-07.md) | 06–13/10/2026 | CDC, testes de aceite, ADR-0002 e ADR-0003 e entrega da E2 |
+| [Semanas 08 a 10](semana-08.md) | 14/10–03/11/2026 | dbt, SCD tipo 2, falhas provocadas, backfill, EXPLAIN, SLA e entrega da E3 |
 
 A planilha de acompanhamento da Squad está disponível para download: [SBD2_Planilha de acompanhamento_G8.xlsx](<../SBD2_Planilha de acompanhamento_G8.xlsx>).
