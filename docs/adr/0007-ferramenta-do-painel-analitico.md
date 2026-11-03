@@ -1,6 +1,6 @@
 # 0007 — Ferramenta do painel analítico: Streamlit versionado em vez de Metabase ou Superset
 
-- **Status:** proposto (aguarda revisão de um integrante que não o redigiu)
+- **Status:** aceito
 - **Data:** 2026-11-03
 - **Decisores:** Squad G8
 
