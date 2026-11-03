@@ -75,6 +75,8 @@ nav:
           - Semanas 08 a 10: diario/semana-08.md
       - Uso de IA: ia.md
   - "Release Notes (E1)": release-notes.md
+  - "Release Notes (E2)": RELEASE_NOTES_E2.md
+
 
 markdown_extensions:
   - admonition
