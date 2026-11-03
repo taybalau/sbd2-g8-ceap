@@ -204,3 +204,7 @@ if __name__ == "__main__":
         out = CENARIOS[nome]()
         (EVID / f"{nome}.json").write_text(json.dumps(out, ensure_ascii=False, indent=2, default=str))
         print(json.dumps(out, ensure_ascii=False, indent=2, default=str))
+        # Nos outros cenários a falha é provocada; na execução normal ela tem de virar erro,
+        # senão o `docker compose up` termina "com sucesso" sem Gold para o painel.
+        if nome == "base" and not all(e["sucesso"] for e in out["execucoes"]):
+            sys.exit(f"cenário base falhou: {[e['job'] for e in out['execucoes'] if not e['sucesso']]}")

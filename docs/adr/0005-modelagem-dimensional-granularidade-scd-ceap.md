@@ -232,8 +232,10 @@ A implementação em `dbt_ceap/` mediu os dados e desmentiu três premissas dest
   uma chave de negócio.
 - `ideDocumento` **não é único**: vale 0 em 30.357 linhas (telefonia e postais), e bilhetes
   SIGEPA repetem o mesmo id em até 9 linhas (trechos e meses diferentes).
-- As 785.929 linhas dos CSVs 2023–2026 são todas distintas entre si. A E1 carregou 785.754
-  linhas, ou seja, 175 linhas legítimas se perderam no `SELECT DISTINCT` parcial da carga.
+- As 785.929 linhas dos CSVs 2023–2026 são todas distintas entre si. A E1 registrou 785.754
+  linhas, mas a diferença não é perda na carga (o INSERT de despesas da E1 não usa `DISTINCT`):
+  os CSVs da Câmara mudam conforme a data do download. Em 2023, por exemplo, a E1 tinha 232.747
+  linhas, a Bronze da E3 232.745 e um download de 2026-11-03 trouxe 232.754.
 - **Novo grão declarado:** *uma linha por lançamento publicado pela Câmara* (documento fiscal,
   trecho de bilhete ou crédito de compensação). A chave é `id_lancamento` = md5 de todos os
   campos de origem. O teste `assert_fato_reconcilia_com_bronze` exige a mesma contagem e a

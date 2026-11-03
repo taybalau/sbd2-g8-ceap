@@ -53,6 +53,9 @@ services:
       - ./base-dados:/app/base-dados
       - ./lakehouse:/app/lakehouse
       - ./orquestracao/.dagster_home:/app/orquestracao/.dagster_home
+    depends_on:
+      # quem baixa os CSVs da Câmara para base-dados/ é o serviço de ingestão da E1/E2
+      ingestion: {condition: service_completed_successfully}
 
   e3-dagster:
     profiles: ["e3"]

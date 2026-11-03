@@ -15,7 +15,7 @@ models:
       - name: id_lancamento
         tests: [not_null]
       - name: sk_parlamentar
-        description: "Versão SCD2 do parlamentar vigente NA COMPETÊNCIA do lançamento."
+        description: "Versão SCD2 do parlamentar vigente na data do gasto (emissão; sem emissão, o 1º dia da competência)."
         tests:
           - not_null
           - relationships: {to: ref('dim_parlamentar_scd'), field: sk_parlamentar}
@@ -27,7 +27,7 @@ models:
         tests:
           - relationships: {to: ref('dim_categoria_despesa'), field: num_subcota}
       - name: data_emissao
-        description: "Nula em 28.496 lançamentos (telefonia, SIGEPA). Por isso o SCD usa a competência, não a emissão."
+        description: "Nula em 28.496 lançamentos (telefonia, SIGEPA). Por isso a junção com o SCD usa coalesce(data_emissao, competencia)."
         tests:
           - relationships:
               to: ref('dim_calendario')
