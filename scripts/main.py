@@ -162,6 +162,11 @@ def main():
     # 4. Ingestão e carga no modelo transacional (OLTP)
     ingest_csv_files(conn, csv_files)
 
+    # 4.1 (E3) Recalcula o gasto mensal pré-agregado da migração 004 (ver docs/explain/)
+    with conn.cursor() as cur:
+        cur.execute("REFRESH MATERIALIZED VIEW mv_gasto_mensal_deputado")
+    conn.commit()
+
     # 5. Validação da consulta analítica da pergunta de gestão
     test_management_query(conn)
 
