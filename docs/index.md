@@ -112,10 +112,10 @@ Na camada analítica da E2, segundo o [ADR-0002](adr/0002-mecanismo-ingestao-e-f
 | :--- | :--- | :--- |
 | **E1** | Fonte transacional (OLTP) em PostgreSQL 16, ingestão reprodutível | :material-check-circle: Entregue em 28/09/2026 (tag `e1`) |
 | **E2** | Ingestão em lote, CDC, lakehouse Delta Lake e enriquecimento societário | :material-check-circle: Entregue em 13/10/2026 |
-| E3 | Transformações | Planejada |
+| **E3** | Modelo dimensional, testes de domínio no dbt, orquestração com Dagster, painel em Streamlit, LGPD, freshness/SLA de 26 h e consulta otimizada | :material-check-circle: Entregue em 03/11/2026 (tag `e3`) |
 | E4 | Ainda não detalhada | Planejada |
 
-Os detalhes da E1 estão nas [Release Notes](release-notes.md); os da E2, no [documento técnico da E2](PIPELINE_E2.md).
+Os detalhes da E1 estão nas [Release Notes](release-notes.md); os da E2, no [documento técnico da E2](PIPELINE_E2.md); os da E3 no [documento técnico da E3](E3_MODEL.md)
 
 ## Tecnologias
 
