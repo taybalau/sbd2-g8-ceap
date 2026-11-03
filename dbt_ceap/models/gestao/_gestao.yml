@@ -27,6 +27,17 @@ models:
     tests:
       - grao_unico: {colunas: [sigla_partido]}
 
+  - name: mart_freshness_gold
+    description: >
+      **Grão:** uma linha por tabela de consumo da Gold. Freshness medida no build: horas entre
+      a ingestão mais recente dos CSVs e a construção da Gold, comparadas com o SLA declarado
+      (var sla_horas_gold). O painel recalcula a idade no momento da leitura.
+    meta:
+      grao: "tabela de consumo (tabela_consumo)"
+      sla: "Gold publicada até 26 h após a ingestão do CSV da Câmara"
+    tests:
+      - grao_unico: {colunas: [tabela_consumo]}
+
   - name: mart_concentracao_parlamentar
     description: "**Grão:** deputado × subcota × fornecedor (competências fechadas)."
     meta: {grao: "deputado × num_subcota × sk_fornecedor"}
