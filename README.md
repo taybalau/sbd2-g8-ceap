@@ -56,13 +56,14 @@ A segunda etapa estabelece a movimentação analítica de dados sem lock-in, atr
 
 ### 3.1 Arquitetura da Entrega E3: Esquema Estrela, Testes de Domínio, Orquestração e Painel
 
-Documento completo: [docs/e3.md](docs/e3.md) · ADRs [0004](docs/adr/0004-avaliacao-etl-relacional-postgres-vs-lakehouse-direto.md), [0005](docs/adr/0005-modelagem-dimensional-granularidade-scd-ceap.md) (com revisão de 2026-11-03) e [0006](docs/adr/0006-orquestracao-falha-controlada-e-backfill.md).
+Documento completo: [docs/e3.md](docs/e3.md) · ADRs [0004](docs/adr/0004-avaliacao-etl-relacional-postgres-vs-lakehouse-direto.md), [0005](docs/adr/0005-modelagem-dimensional-granularidade-scd-ceap.md) (com revisão de 2026-11-03), [0006](docs/adr/0006-orquestracao-falha-controlada-e-backfill.md) e [0007](docs/adr/0007-ferramenta-do-painel-analitico.md) · Consulta otimizada (EXPLAIN antes e depois): [docs/explain/](docs/explain/README.md).
 
 - **Direct-to-Lakehouse:** CSV da Câmara → Bronze Delta (`ingestao/bronze.py`, partição por ano, idempotente) + histórico oficial de deputados via API (`ingestao/bronze_historico.py`).
 - **dbt (`dbt_ceap/`):** fato `fct_lancamento_ceap` com grão declarado (uma linha por lançamento publicado), `dim_parlamentar_scd` (SCD tipo 2 a partir do histórico oficial, porque o CSV regrava o partido atual) e marts Gold que respondem à pergunta de gestão.
 - **Testes de domínio:** negativo fora de subcota de compensação, salto de série por subcota, subcota que some entre anos, reconciliação Bronze ↔ fato ↔ Gold e regressão do SCD com caso real.
 - **Dagster (`orquestracao/`):** retry com backoff, falha de fonte sem propagação e backfill por ano. Tudo isso é exercitado por `orquestracao/demo_falhas.py`.
-- **Painel (`painel/app.py`):** três blocos, um por parte da pergunta.
+- **Painel (`painel/app.py`):** três blocos, um por parte da pergunta (Streamlit; justificativa no ADR-0007).
+- **Freshness e SLA:** Gold publicada até 26 h após a ingestão (`gold.mart_freshness_gold`, teste `assert_gold_dentro_do_sla`).
 
 ```bash
 docker compose up --build   # E1/E2 + pipeline da E3 + Dagster (:3000) + painel (:8501)
