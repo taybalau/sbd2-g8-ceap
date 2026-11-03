@@ -23,6 +23,8 @@ from dagster import (
     AssetExecutionContext,
     AssetSelection,
     DagsterRunStatus,
+    DefaultScheduleStatus,
+    DefaultSensorStatus,
     RunRequest,
     AssetKey,
     Backoff,
@@ -122,7 +124,10 @@ transformacao = define_asset_job(
 )
 
 
-@schedule(job=ingestao_ceap, cron_schedule="0 6 * * *", execution_timezone="America/Sao_Paulo")
+# Ligados por padrão: sem isso o `dagster dev` sobe com agenda e sensor desligados e o grafo
+# não roda sozinho.
+@schedule(job=ingestao_ceap, cron_schedule="0 6 * * *", execution_timezone="America/Sao_Paulo",
+          default_status=DefaultScheduleStatus.RUNNING)
 def diario_ano_corrente(context):
     """Todo dia reingere só o ano corrente (anos fechados mudam pouco; backfill sob demanda)."""
     ano = str(context.scheduled_execution_time.year)
@@ -131,7 +136,7 @@ def diario_ano_corrente(context):
 
 
 @run_status_sensor(run_status=DagsterRunStatus.SUCCESS, monitored_jobs=[ingestao_ceap],
-                   request_job=transformacao)
+                   request_job=transformacao, default_status=DefaultSensorStatus.RUNNING)
 def transforma_apos_ingestao(context):
     """Só transforma depois de uma ingestão BEM-SUCEDIDA. Ingestão que falhou não dispara nada."""
     return RunRequest(run_key=context.dagster_run.run_id)

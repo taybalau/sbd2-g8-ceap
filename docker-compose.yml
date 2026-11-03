@@ -59,7 +59,7 @@ services:
   e3-dagster:
     build: {context: ., dockerfile: docker/e3/Dockerfile}
     container_name: ceap_e3_dagster
-    command: dagster dev -f orquestracao/definitions.py -h 0.0.0.0 -p 3000
+    command: sh -c "cp orquestracao/dagster.yaml $$DAGSTER_HOME/dagster.yaml && dagster dev -f orquestracao/definitions.py -h 0.0.0.0 -p 3000"
     ports: ["3000:3000"]
     volumes:
       - ./base-dados:/app/base-dados

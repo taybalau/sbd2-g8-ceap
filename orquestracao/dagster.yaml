@@ -1,0 +1,7 @@
+# Configuração da instância do Dagster (copiada para $DAGSTER_HOME ao subir o e3-dagster).
+# Uma execução por vez: os jobs gravam o mesmo ceap.duckdb, que aceita um único escritor.
+# O backfill e as transformações disparadas pelo sensor entram na fila em vez de colidir.
+run_queue:
+  max_concurrent_runs: 1
+telemetry:
+  enabled: false
