@@ -77,6 +77,7 @@ nav:
       - Uso de IA: ia.md
   - "Release Notes (E1)": release-notes.md
   - "Release Notes (E2)": RELEASE_NOTES_E2.md
+  - "Release Notes (E3)": release_notes_e3.md
 
 
 markdown_extensions:
