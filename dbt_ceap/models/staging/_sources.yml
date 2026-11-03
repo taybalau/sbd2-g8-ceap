@@ -1,0 +1,23 @@
+version: 2
+sources:
+  - name: bronze
+    description: "Camada Bronze em Delta Lake, gravada por ingestao/*.py. Texto bruto, sem coerção."
+    tables:
+      - name: ceap_lancamento
+        description: "Uma linha por linha dos CSVs anuais da CEAP publicados pela Câmara. Coluna cpf descartada (LGPD)."
+        meta:
+          external_location: "delta_scan('{{ env_var(\"LAKEHOUSE_PATH\", \"../lakehouse\") }}/bronze/ceap_lancamento')"
+        columns:
+          - name: _hash_lancamento
+            description: "md5 de todos os campos de origem; identifica a linha publicada."
+            tests: [unique, not_null]
+      - name: camara_deputado_historico
+        description: >
+          Uma linha por evento do histórico do deputado (GET /deputados/{id}/historico).
+          É a fonte do SCD tipo 2: o sgPartido do CSV da CEAP é regravado com o partido atual.
+        meta:
+          external_location: "delta_scan('{{ env_var(\"LAKEHOUSE_PATH\", \"../lakehouse\") }}/bronze/camara_deputado_historico')"
+        freshness:
+          warn_after: {count: 7, period: day}
+          error_after: {count: 30, period: day}
+        loaded_at_field: "_extraido_em::timestamptz"

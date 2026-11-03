@@ -1,0 +1,73 @@
+version: 2
+
+models:
+  - name: fct_lancamento_ceap
+    description: >
+      **Grão:** uma linha por lançamento publicado pela Câmara nos CSVs da CEAP (documento
+      fiscal, trecho de bilhete aéreo ou crédito/compensação). **Não** é "uma linha por
+      documento": ideDocumento se repete (até 9×) e vale 0 em 30.357 linhas.
+    meta:
+      grao: "lançamento publicado (id_lancamento)"
+      soma_segura: [valor_liquido, valor_documento, valor_glosa]
+    tests:
+      - grao_unico: {colunas: [id_lancamento]}
+    columns:
+      - name: id_lancamento
+        tests: [not_null]
+      - name: sk_parlamentar
+        description: "Versão SCD2 do parlamentar vigente NA COMPETÊNCIA do lançamento."
+        tests:
+          - not_null
+          - relationships: {to: ref('dim_parlamentar_scd'), field: sk_parlamentar}
+      - name: sk_fornecedor
+        tests:
+          - not_null
+          - relationships: {to: ref('dim_fornecedor'), field: sk_fornecedor}
+      - name: num_subcota
+        tests:
+          - relationships: {to: ref('dim_categoria_despesa'), field: num_subcota}
+      - name: data_emissao
+        description: "Nula em 28.496 lançamentos (telefonia, SIGEPA). Por isso o SCD usa a competência, não a emissão."
+        tests:
+          - relationships:
+              to: ref('dim_calendario')
+              field: data
+              config: {severity: warn}
+
+  - name: dim_parlamentar_scd
+    description: >
+      **Grão:** uma linha por versão do parlamentar (trecho contínuo com o mesmo partido e UF).
+      SCD tipo 2 construído do histórico oficial de eventos da Câmara (não do CSV, que é
+      regravado com o partido atual).
+    meta:
+      grao: "deputado × versão (sk_parlamentar)"
+      scd: 2
+    tests:
+      - grao_unico: {colunas: [sk_parlamentar]}
+      - grao_unico: {colunas: [id_deputado, numero_versao]}
+      - grao_unico: {colunas: [id_cadastro_camara, numero_versao], config: {where: "not is_lideranca"}}
+    columns:
+      - name: sk_parlamentar
+        tests: [not_null]
+
+  - name: dim_fornecedor
+    description: "**Grão:** uma linha por fornecedor (CNPJ/CPF; sem documento, pelo nome). SCD tipo 1 no nome, justificado no modelo."
+    meta: {grao: "fornecedor (sk_fornecedor)", scd: 1}
+    tests:
+      - grao_unico: {colunas: [sk_fornecedor]}
+
+  - name: dim_categoria_despesa
+    description: "**Grão:** uma linha por subcota da CEAP."
+    meta: {grao: "subcota (num_subcota)"}
+    tests:
+      - grao_unico: {colunas: [num_subcota]}
+    columns:
+      - name: grupo_despesa
+        description: "Vem do seed regra_subcota. Nulo = subcota nova que ninguém classificou."
+        tests: [not_null]
+
+  - name: dim_calendario
+    description: "**Grão:** um dia civil."
+    meta: {grao: "dia (data)"}
+    tests:
+      - grao_unico: {colunas: [data]}

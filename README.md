@@ -54,6 +54,22 @@ A segunda etapa estabelece a movimentação analítica de dados sem lock-in, atr
 
 ---
 
+### 3.1 Arquitetura da Entrega E3: Esquema Estrela, Testes de Domínio, Orquestração e Painel
+
+Documento completo: [docs/e3.md](docs/e3.md) · ADRs [0004](docs/adr/0004-avaliacao-etl-relacional-postgres-vs-lakehouse-direto.md), [0005](docs/adr/0005-modelagem-dimensional-granularidade-scd-ceap.md) (com revisão de 2026-11-03) e [0006](docs/adr/0006-orquestracao-falha-controlada-e-backfill.md).
+
+- **Direct-to-Lakehouse:** CSV da Câmara → Bronze Delta (`ingestao/bronze.py`, partição por ano, idempotente) + histórico oficial de deputados via API (`ingestao/bronze_historico.py`).
+- **dbt (`dbt_ceap/`):** fato `fct_lancamento_ceap` com grão declarado (uma linha por lançamento publicado), `dim_parlamentar_scd` (SCD tipo 2 a partir do histórico oficial, porque o CSV regrava o partido atual) e marts Gold que respondem à pergunta de gestão.
+- **Testes de domínio:** negativo fora de subcota de compensação, salto de série por subcota, subcota que some entre anos, reconciliação Bronze ↔ fato ↔ Gold e regressão do SCD com caso real.
+- **Dagster (`orquestracao/`):** retry com backoff, falha de fonte sem propagação e backfill por ano. Tudo isso é exercitado por `orquestracao/demo_falhas.py`.
+- **Painel (`painel/app.py`):** três blocos, um por parte da pergunta.
+
+```bash
+docker compose --profile e3 up --build   # pipeline + Dagster (:3000) + painel (:8501)
+```
+
+---
+
 ### 4. Como Subir a Plataforma do Zero (Execução Reprodutível)
 
 A plataforma foi projetada para subir **do zero em máquina limpa** a partir do repositório, sem nenhum passo manual de configuração:

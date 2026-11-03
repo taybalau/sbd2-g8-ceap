@@ -1,0 +1,87 @@
+{
+  "ingestao": {
+    "job": "ingestao_ceap",
+    "particao": "2026",
+    "sucesso": true,
+    "run_id": "05e9dc0f-c760-4135-9fed-7ec5a3d18f10",
+    "dbt": {},
+    "tentativas_extras": 0,
+    "erros_das_tentativas": [],
+    "passos_com_falha": [],
+    "passos_iniciados": [
+      "bronze__ceap_lancamento"
+    ],
+    "passos_nao_executados": [],
+    "assets_materializados": [
+      "bronze/ceap_lancamento"
+    ],
+    "checks_dbt_reprovados": []
+  },
+  "transformacao": {
+    "job": "transformacao",
+    "particao": null,
+    "sucesso": false,
+    "run_id": "efb7e1ee-a2ae-4135-b706-679d7b4b043d",
+    "dbt": {
+      "testes_reprovados": [
+        "assert_negativo_somente_em_subcota_de_compensacao"
+      ],
+      "testes_com_aviso": [
+        "assert_deputado_ativo_nao_some_no_meio",
+        "assert_divergencia_csv_vs_historico",
+        "relationships_fct_lancamento_ceap_data_emissao__data__ref_dim_calendario_"
+      ],
+      "modelos_pulados": [
+        "fct_gasto_mensal_parlamentar",
+        "mart_concentracao_parlamentar",
+        "mart_desvio_parlamentar",
+        "mart_desvio_partido"
+      ],
+      "testes_aprovados": 29
+    },
+    "tentativas_extras": 0,
+    "erros_das_tentativas": [],
+    "passos_com_falha": [
+      {
+        "passo": "modelos_dbt",
+        "erro": "dagster_dbt.errors.DagsterDbtCliRuntimeError: The dbt CLI process with command\n\n`/home/pedrolucas0/Documentos/sbd2-g8-ceap/.venv/bin/dbt build --select fqn:*`\n\nfailed with exit code `1`. Check the stdout in the Dagster compute logs for the full information about the error, or view the dbt debug log:"
+      }
+    ],
+    "passos_iniciados": [
+      "bronze__camara_deputado_historico",
+      "modelos_dbt"
+    ],
+    "passos_nao_executados": [],
+    "assets_materializados": [
+      "bronze/camara_deputado_historico",
+      "silver/dim_calendario",
+      "silver/dim_categoria_despesa",
+      "silver/dim_fornecedor",
+      "silver/dim_parlamentar_scd",
+      "silver/fct_lancamento_ceap",
+      "silver/int_parlamentar__versoes",
+      "silver/regra_subcota",
+      "silver/ruptura_publicacao",
+      "silver/stg_camara__deputado_evento",
+      "silver/stg_ceap__lancamento"
+    ],
+    "checks_dbt_reprovados": [
+      "assert_deputado_ativo_nao_some_no_meio",
+      "relationships_fct_lancamento_ceap_data_emissao__data__ref_dim_calendario_"
+    ]
+  },
+  "antes": {
+    "gold_linhas": 622,
+    "gold_hash": "47b503bb8f7703a1ffb98395f88231c4",
+    "silver_fato_linhas": 785929,
+    "bronze_ceap_lancamento_versao": 12,
+    "bronze_camara_deputado_historico_versao": 3
+  },
+  "depois": {
+    "gold_linhas": 622,
+    "gold_hash": "47b503bb8f7703a1ffb98395f88231c4",
+    "silver_fato_linhas": 785929,
+    "bronze_ceap_lancamento_versao": 13,
+    "bronze_camara_deputado_historico_versao": 4
+  }
+}

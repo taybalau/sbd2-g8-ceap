@@ -1,0 +1,121 @@
+{
+  "execucoes": [
+    {
+      "job": "ingestao_ceap",
+      "particao": "2023",
+      "sucesso": true,
+      "run_id": "f5e91a90-87c6-4072-bc6d-7964578c487f",
+      "dbt": {},
+      "tentativas_extras": 0,
+      "erros_das_tentativas": [],
+      "passos_com_falha": [],
+      "passos_iniciados": [
+        "bronze__ceap_lancamento"
+      ],
+      "passos_nao_executados": [],
+      "assets_materializados": [
+        "bronze/ceap_lancamento"
+      ],
+      "checks_dbt_reprovados": []
+    },
+    {
+      "job": "ingestao_ceap",
+      "particao": "2024",
+      "sucesso": true,
+      "run_id": "1c0f065f-0e57-4d98-b5b1-c3862591b8d0",
+      "dbt": {},
+      "tentativas_extras": 0,
+      "erros_das_tentativas": [],
+      "passos_com_falha": [],
+      "passos_iniciados": [
+        "bronze__ceap_lancamento"
+      ],
+      "passos_nao_executados": [],
+      "assets_materializados": [
+        "bronze/ceap_lancamento"
+      ],
+      "checks_dbt_reprovados": []
+    },
+    {
+      "job": "transformacao",
+      "particao": null,
+      "sucesso": true,
+      "run_id": "2c5212f8-cffa-4fe6-8094-08b895ee55c4",
+      "dbt": {
+        "testes_reprovados": [],
+        "testes_com_aviso": [
+          "assert_deputado_ativo_nao_some_no_meio",
+          "assert_divergencia_csv_vs_historico",
+          "relationships_fct_lancamento_ceap_data_emissao__data__ref_dim_calendario_"
+        ],
+        "modelos_pulados": [],
+        "testes_aprovados": 36
+      },
+      "tentativas_extras": 0,
+      "erros_das_tentativas": [],
+      "passos_com_falha": [],
+      "passos_iniciados": [
+        "bronze__camara_deputado_historico",
+        "modelos_dbt"
+      ],
+      "passos_nao_executados": [],
+      "assets_materializados": [
+        "bronze/camara_deputado_historico",
+        "gold/fct_gasto_mensal_parlamentar",
+        "gold/mart_concentracao_parlamentar",
+        "gold/mart_desvio_parlamentar",
+        "gold/mart_desvio_partido",
+        "silver/dim_calendario",
+        "silver/dim_categoria_despesa",
+        "silver/dim_fornecedor",
+        "silver/dim_parlamentar_scd",
+        "silver/fct_lancamento_ceap",
+        "silver/int_parlamentar__versoes",
+        "silver/regra_subcota",
+        "silver/ruptura_publicacao",
+        "silver/stg_camara__deputado_evento",
+        "silver/stg_ceap__lancamento"
+      ],
+      "checks_dbt_reprovados": [
+        "assert_deputado_ativo_nao_some_no_meio",
+        "relationships_fct_lancamento_ceap_data_emissao__data__ref_dim_calendario_"
+      ]
+    }
+  ],
+  "antes": {
+    "gold_linhas": 622,
+    "gold_hash": "47b503bb8f7703a1ffb98395f88231c4",
+    "silver_fato_linhas": 785929,
+    "bronze_ceap_lancamento_versao": 12,
+    "bronze_camara_deputado_historico_versao": 3
+  },
+  "depois": {
+    "gold_linhas": 622,
+    "gold_hash": "47b503bb8f7703a1ffb98395f88231c4",
+    "silver_fato_linhas": 785929,
+    "bronze_ceap_lancamento_versao": 14,
+    "bronze_camara_deputado_historico_versao": 4
+  },
+  "bronze_por_ano": [
+    [
+      "2023",
+      "232745",
+      "2026-11-03T13:41:21+00:00"
+    ],
+    [
+      "2024",
+      "232925",
+      "2026-11-03T13:41:25+00:00"
+    ],
+    [
+      "2025",
+      "209078",
+      "2026-11-03T13:34:05+00:00"
+    ],
+    [
+      "2026",
+      "111181",
+      "2026-11-03T13:26:50+00:00"
+    ]
+  ]
+}
