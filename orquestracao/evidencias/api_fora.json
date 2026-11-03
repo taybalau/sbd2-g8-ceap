@@ -1,0 +1,42 @@
+{
+  "execucao": {
+    "job": "transformacao",
+    "particao": null,
+    "sucesso": false,
+    "run_id": "da38cdbe-7fca-4955-b754-d0600b90ea77",
+    "tentativas_extras": 3,
+    "erros_das_tentativas": [
+      "bronze_historico.ApiIndisponivel: API da Câmara inacessível em http://127.0.0.1:9/api/v2: ConnectionError",
+      "bronze_historico.ApiIndisponivel: API da Câmara inacessível em http://127.0.0.1:9/api/v2: ConnectionError",
+      "bronze_historico.ApiIndisponivel: API da Câmara inacessível em http://127.0.0.1:9/api/v2: ConnectionError"
+    ],
+    "passos_com_falha": [
+      {
+        "passo": "bronze__camara_deputado_historico",
+        "erro": "Exceeded max_retries of 3"
+      }
+    ],
+    "passos_iniciados": [
+      "bronze__camara_deputado_historico"
+    ],
+    "passos_nao_executados": [
+      "modelos_dbt"
+    ],
+    "assets_materializados": [],
+    "checks_dbt_reprovados": []
+  },
+  "antes": {
+    "gold_linhas": 622,
+    "gold_hash": "7d66273fd82d5a95ce8ef69aa58310cf",
+    "silver_fato_linhas": 785929,
+    "bronze_ceap_lancamento_versao": 10,
+    "bronze_camara_deputado_historico_versao": 2
+  },
+  "depois": {
+    "gold_linhas": 622,
+    "gold_hash": "7d66273fd82d5a95ce8ef69aa58310cf",
+    "silver_fato_linhas": 785929,
+    "bronze_ceap_lancamento_versao": 10,
+    "bronze_camara_deputado_historico_versao": 2
+  }
+}

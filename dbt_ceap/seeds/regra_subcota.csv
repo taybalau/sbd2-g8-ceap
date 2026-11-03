@@ -1,0 +1,23 @@
+num_subcota,grupo_despesa,permite_valor_negativo,justificativa_negativo
+1,Escritório,false,
+3,Combustíveis,false,
+4,Consultorias,false,
+5,Divulgação,false,
+8,Segurança,false,
+9,Passagens aéreas,false,
+10,Telefonia,false,
+11,Serviços postais,false,
+12,Publicações,false,
+13,Alimentação,false,
+14,Hospedagem,false,
+40,Auxílio-moradia,true,Devolução/compensação de complemento de auxílio-moradia lançada como valor negativo (2.933 lançamentos em 2023-2026)
+119,Locação de veículos e aeronaves,false,
+120,Locação de veículos e aeronaves,false,
+121,Locação de veículos e aeronaves,false,
+122,Táxi e pedágio,false,
+123,Passagens terrestres,false,
+137,Cursos e eventos,false,
+145,Certificado digital,false,
+996,Passagens aéreas,true,Crédito de passagem aérea de missão oficial lançado como valor negativo (6 lançamentos entre mai/2025 e set/2026 no download de 2026-11-03)
+998,Passagens aéreas,true,Crédito de bilhete SIGEPA cancelado/remarcado lançado como valor negativo (27.276 lançamentos em 2023-2026)
+999,Passagens aéreas,true,Crédito de bilhete RPA cancelado lançado como valor negativo (191 lançamentos em 2023-2026)

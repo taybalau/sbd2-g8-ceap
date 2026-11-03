@@ -44,6 +44,43 @@ services:
     networks:
       - ceap_network
 
+  e3-pipeline:
+    profiles: ["e3"]
+    build: {context: ., dockerfile: docker/e3/Dockerfile}
+    container_name: ceap_e3_pipeline
+    command: python orquestracao/demo_falhas.py base
+    volumes:
+      - ./base-dados:/app/base-dados
+      - ./lakehouse:/app/lakehouse
+      - ./orquestracao/.dagster_home:/app/orquestracao/.dagster_home
+    depends_on:
+      # quem baixa os CSVs da Câmara para base-dados/ é o serviço de ingestão da E1/E2
+      ingestion: {condition: service_completed_successfully}
+
+  e3-dagster:
+    profiles: ["e3"]
+    build: {context: ., dockerfile: docker/e3/Dockerfile}
+    container_name: ceap_e3_dagster
+    command: dagster dev -f orquestracao/definitions.py -h 0.0.0.0 -p 3000
+    ports: ["3000:3000"]
+    volumes:
+      - ./base-dados:/app/base-dados
+      - ./lakehouse:/app/lakehouse
+      - ./orquestracao/.dagster_home:/app/orquestracao/.dagster_home
+    depends_on:
+      e3-pipeline: {condition: service_completed_successfully}
+
+  e3-painel:
+    profiles: ["e3"]
+    build: {context: ., dockerfile: docker/e3/Dockerfile}
+    container_name: ceap_e3_painel
+    command: streamlit run painel/app.py --server.address 0.0.0.0 --server.port 8501
+    ports: ["8501:8501"]
+    volumes:
+      - ./lakehouse:/app/lakehouse
+    depends_on:
+      e3-pipeline: {condition: service_completed_successfully}
+
 volumes:
   postgres_data:
 

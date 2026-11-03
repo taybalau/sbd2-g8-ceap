@@ -217,3 +217,53 @@ A Squad G8 decidiu pela:
 Esta decisão será revisada caso:
 1. A Câmara dos Deputados altere o modelo de prestação de contas da CEAP, extinguindo a emissão de notas fiscais individuais e passando a conceder cotas globais em verbas de gabinete sem comprovação de documentos fiscais.
 2. O número de fontes externas integradas ultrapasse 15 bases heterogêneas distintas com frequente reestruturação de esquemas de origem, justificando a transição para Data Vault 2.0.
+
+---
+
+## 9. Revisão de 2026-11-03: o que a implementação mostrou e o que mudou
+
+> Status desta revisão: **proposta**. Precisa ser revisada e aprovada por um integrante que não
+> a redigiu.
+
+A implementação em `dbt_ceap/` mediu os dados e desmentiu três premissas deste ADR.
+
+### 9.1 O grão não é "um documento fiscal (`id_despesa`)"
+- `id_despesa` era um `BIGSERIAL` do PostgreSQL da E1, um contador de linhas carregadas, não
+  uma chave de negócio.
+- `ideDocumento` **não é único**: vale 0 em 30.357 linhas (telefonia e postais), e bilhetes
+  SIGEPA repetem o mesmo id em até 9 linhas (trechos e meses diferentes).
+- As 785.929 linhas dos CSVs 2023–2026 são todas distintas entre si. A E1 registrou 785.754
+  linhas, mas a diferença não é perda na carga (o INSERT de despesas da E1 não usa `DISTINCT`):
+  os CSVs da Câmara mudam conforme a data do download. Em 2023, por exemplo, a E1 tinha 232.747
+  linhas, a Bronze da E3 232.745 e um download de 2026-11-03 trouxe 232.754.
+- **Novo grão declarado:** *uma linha por lançamento publicado pela Câmara* (documento fiscal,
+  trecho de bilhete ou crédito de compensação). A chave é `id_lancamento` = md5 de todos os
+  campos de origem. O teste `assert_fato_reconcilia_com_bronze` exige a mesma contagem e a
+  mesma soma da Bronze, o que pega fan-out e dupla agregação.
+
+### 9.2 O SCD tipo 2 não pode vir do CSV: a fonte já sobrescreve
+- O `sgPartido` do CSV é regravado com o partido **atual**. Caso verificado na API oficial
+  (`/deputados/204494/historico`): o deputado era PATRIOTA até 07/02/2024, mas o Ano-2023.csv
+  já o mostra como PRD em fev/2023.
+- Medido: **173.413 lançamentos (22%)** têm, no CSV, um partido diferente do vigente na data do
+  gasto. Na janela comparável, usar o partido do CSV ou o atual mandaria **R$ 33,4 mi** para o
+  partido errado. O PODE, por exemplo, ganharia R$ 11,7 mi que não são dele, e o PDT perderia
+  R$ 9,7 mi.
+- **Nova fonte do SCD2:** a API de histórico de eventos (`bronze/camara_deputado_historico`).
+  Nela, 186 deputados têm "Alteração de partido" registrada na 57ª Legislatura. Pelo CSV, apenas
+  92 pareciam ter trocado.
+- A junção do fato usa `coalesce(data_emissao, competencia)` contra `[valido_de, valido_ate)`.
+  `data_emissao` é nula em 28.496 lançamentos, por isso a data sozinha não serve.
+
+### 9.3 "Média mensal" precisava de definição e de janela
+- A média é a do gasto mensal dos deputados **da mesma UF** no mesmo mês, porque o teto da cota
+  varia por estado. Lideranças e a 56ª Legislatura (jan/2023) ficam fora.
+- Só entram competências **comparáveis**: com 4 meses de maturação (dado atrasado) e anteriores
+  à ruptura de publicação da subcota 998 (SIGEPA), que deixa de ter débitos nos CSVs a partir de
+  ago/2025. A ruptura está registrada em `seeds/ruptura_publicacao.csv`, e qualquer ruptura nova
+  quebra o build. Janela atual: fev/2023 a jul/2025 (30 meses).
+
+### 9.4 Itens do ADR não implementados
+- `dim_beneficiario_final_ubo` não entrou no esquema estrela da E3. O enriquecimento da E2
+  continua disponível, mas não é necessário para responder à pergunta de gestão da E1.
+- `dim_calendario` não marca feriados. Nenhuma métrica da pergunta depende deles.

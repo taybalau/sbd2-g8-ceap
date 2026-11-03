@@ -1,0 +1,56 @@
+{
+  "execucoes": [
+    {
+      "job": "ingestao_ceap",
+      "particao": "2023",
+      "sucesso": true,
+      "run_id": "4191d92b-38cd-46ab-b4ba-2de34c09d46c",
+      "tentativas_extras": 0,
+      "passos_com_falha": [],
+      "passos_pulados": []
+    },
+    {
+      "job": "ingestao_ceap",
+      "particao": "2024",
+      "sucesso": true,
+      "run_id": "3ca03f79-1856-4707-aaa9-e75ed162dab6",
+      "tentativas_extras": 0,
+      "passos_com_falha": [],
+      "passos_pulados": []
+    },
+    {
+      "job": "ingestao_ceap",
+      "particao": "2025",
+      "sucesso": true,
+      "run_id": "0e72e9e7-7b80-4300-b6cd-ad8ed97394fc",
+      "tentativas_extras": 0,
+      "passos_com_falha": [],
+      "passos_pulados": []
+    },
+    {
+      "job": "ingestao_ceap",
+      "particao": "2026",
+      "sucesso": true,
+      "run_id": "c1d49373-135c-4d67-a52a-ae65006818f3",
+      "tentativas_extras": 0,
+      "passos_com_falha": [],
+      "passos_pulados": []
+    },
+    {
+      "job": "transformacao",
+      "particao": null,
+      "sucesso": true,
+      "run_id": "37b850c7-7277-48f9-8ae3-928ea25746dc",
+      "tentativas_extras": 0,
+      "passos_com_falha": [],
+      "passos_pulados": []
+    }
+  ],
+  "estado": {
+    "gold_linhas": 622,
+    "gold_hash": "99ea9dfd824ae5d8af1348b2dedeefb8",
+    "silver_fato_linhas": 785929,
+    "bronze_ceap_lancamento_versao": 8,
+    "bronze_camara_deputado_historico_versao": 1
+  }
+}

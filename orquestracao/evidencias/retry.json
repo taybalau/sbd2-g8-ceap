@@ -1,0 +1,36 @@
+{
+  "execucao": {
+    "job": "ingestao_ceap",
+    "particao": "2025",
+    "sucesso": true,
+    "run_id": "857e143c-8286-455b-9d00-b5a04779f121",
+    "tentativas_extras": 2,
+    "erros_das_tentativas": [
+      "OSError: [falha injetada] leitura de Ano-2025.csv interrompida (tentativa 1 de 2 que devem falhar)",
+      "OSError: [falha injetada] leitura de Ano-2025.csv interrompida (tentativa 2 de 2 que devem falhar)"
+    ],
+    "passos_com_falha": [],
+    "passos_iniciados": [
+      "bronze__ceap_lancamento"
+    ],
+    "passos_nao_executados": [],
+    "assets_materializados": [
+      "bronze/ceap_lancamento"
+    ],
+    "checks_dbt_reprovados": []
+  },
+  "antes": {
+    "gold_linhas": 622,
+    "gold_hash": "7d66273fd82d5a95ce8ef69aa58310cf",
+    "silver_fato_linhas": 785929,
+    "bronze_ceap_lancamento_versao": 9,
+    "bronze_camara_deputado_historico_versao": 2
+  },
+  "depois": {
+    "gold_linhas": 622,
+    "gold_hash": "7d66273fd82d5a95ce8ef69aa58310cf",
+    "silver_fato_linhas": 785929,
+    "bronze_ceap_lancamento_versao": 10,
+    "bronze_camara_deputado_historico_versao": 2
+  }
+}

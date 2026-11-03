@@ -1,0 +1,34 @@
+version: 2
+
+models:
+  - name: fct_gasto_mensal_parlamentar
+    description: >
+      **Grão:** deputado × versão SCD (partido da época) × competência. 57ª Legislatura, sem
+      lideranças. gasto_versao é aditivo; gasto_deputado_mes, media_uf_mes e
+      desvio_deputado_mes se REPETEM nas versões de um mesmo mês — não some essas colunas
+      sem antes fazer DISTINCT por (id_deputado, competencia). Para somar desvio por partido
+      use desvio_alocado.
+    meta:
+      grao: "deputado × sk_parlamentar × competência"
+      soma_segura: [gasto_versao, qtd_lancamentos, desvio_alocado]
+      soma_proibida: [gasto_deputado_mes, media_uf_mes, desvio_deputado_mes]
+    tests:
+      - grao_unico: {colunas: [sk_parlamentar, competencia]}
+
+  - name: mart_desvio_parlamentar
+    description: "**Grão:** um deputado. Ranking do desvio acumulado acima da média mensal da UF (competências fechadas)."
+    meta: {grao: "deputado (id_deputado)"}
+    tests:
+      - grao_unico: {colunas: [id_deputado]}
+
+  - name: mart_desvio_partido
+    description: "**Grão:** um partido, pela sigla vigente na data do gasto (SCD2). Inclui o comparativo com o resultado errado da sobrescrita."
+    meta: {grao: "partido (sigla_partido)"}
+    tests:
+      - grao_unico: {colunas: [sigla_partido]}
+
+  - name: mart_concentracao_parlamentar
+    description: "**Grão:** deputado × subcota × fornecedor (competências fechadas)."
+    meta: {grao: "deputado × num_subcota × sk_fornecedor"}
+    tests:
+      - grao_unico: {colunas: [id_deputado, num_subcota, sk_fornecedor]}

@@ -26,3 +26,14 @@ Thumbs.db
 
 # Site gerado pelo MkDocs
 site/
+
+# E3 — artefatos locais
+dbt_ceap/target/
+dbt_ceap/logs/
+dbt_ceap/dbt_packages/
+orquestracao/.dagster_home/
+orquestracao/.tmp_dagster_home_*/
+logs/
+dbt_ceap/.user.yml
+# Seeds do dbt são regras de domínio versionadas, não dados brutos (exceção ao *.csv acima)
+!dbt_ceap/seeds/*.csv

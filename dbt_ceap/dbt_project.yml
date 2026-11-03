@@ -1,0 +1,38 @@
+name: ceap
+version: "3.0.0"
+config-version: 2
+profile: ceap
+
+model-paths: ["models"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+seed-paths: ["seeds"]
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+vars:
+  # Meses recentes cuja prestação de contas ainda está chegando (dado atrasado).
+  # Medido em 2026-11-03: com corte em set/2026, jun/2026 tinha 54% do gasto típico e
+  # set/2026 apenas 7%. Com 4 meses de maturação, a última competência fechada é mai/2026.
+  meses_maturacao: 4
+  codigo_legislatura: 57
+
+models:
+  ceap:
+    staging:
+      +schema: silver
+      +materialized: view
+    intermediate:
+      +schema: silver
+      +materialized: table
+    core:
+      +schema: silver
+      +materialized: table
+    gestao:
+      +schema: gold
+      +materialized: table
+
+tests:
+  ceap:
+    +store_failures: true
+    +schema: auditoria

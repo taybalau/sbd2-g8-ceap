@@ -1,0 +1,42 @@
+{
+  "execucao": {
+    "job": "ingestao_ceap",
+    "particao": "2026",
+    "sucesso": false,
+    "run_id": "ac178cc3-1834-4e75-8b59-1c77962c532b",
+    "tentativas_extras": 3,
+    "erros_das_tentativas": [
+      "bronze.FonteIndisponivel: Fonte da Câmara indisponível: /tmp/fonte_vazia_l7h5qqbb/Ano-2026.csv não encontrado",
+      "bronze.FonteIndisponivel: Fonte da Câmara indisponível: /tmp/fonte_vazia_l7h5qqbb/Ano-2026.csv não encontrado",
+      "bronze.FonteIndisponivel: Fonte da Câmara indisponível: /tmp/fonte_vazia_l7h5qqbb/Ano-2026.csv não encontrado"
+    ],
+    "passos_com_falha": [
+      {
+        "passo": "bronze__ceap_lancamento",
+        "erro": "Exceeded max_retries of 3"
+      }
+    ],
+    "passos_iniciados": [
+      "bronze__ceap_lancamento"
+    ],
+    "passos_nao_executados": [],
+    "assets_materializados": [],
+    "checks_dbt_reprovados": []
+  },
+  "antes": {
+    "gold_linhas": 622,
+    "gold_hash": "7d66273fd82d5a95ce8ef69aa58310cf",
+    "silver_fato_linhas": 785929,
+    "bronze_ceap_lancamento_versao": 10,
+    "bronze_camara_deputado_historico_versao": 2
+  },
+  "depois": {
+    "gold_linhas": 622,
+    "gold_hash": "7d66273fd82d5a95ce8ef69aa58310cf",
+    "silver_fato_linhas": 785929,
+    "bronze_ceap_lancamento_versao": 10,
+    "bronze_camara_deputado_historico_versao": 2
+  },
+  "transformacao_disparada": false,
+  "motivo": "sensor transforma_apos_ingestao só observa DagsterRunStatus.SUCCESS"
+}

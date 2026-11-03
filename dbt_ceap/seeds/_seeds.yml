@@ -1,0 +1,25 @@
+version: 2
+seeds:
+  - name: regra_subcota
+    config:
+      schema: silver
+      column_types: {num_subcota: integer, permite_valor_negativo: boolean}
+    description: >
+      Regras de domínio por subcota. `permite_valor_negativo` foi derivado do perfil dos dados
+      (2026-11-03): só as subcotas 40, 998 e 999 têm vlrLiquido < 0. A 996 (missão oficial, só
+      créditos) apareceu num download posterior do mesmo dia e foi classificada igual. Qualquer negativo novo em
+      outra subcota quebra o teste assert_negativo_somente_em_subcota_de_compensacao e exige análise.
+    columns:
+      - name: num_subcota
+        tests: [unique, not_null]
+  - name: ruptura_publicacao
+    config:
+      schema: silver
+      column_types: {num_subcota: integer, competencia_inicio: date}
+    description: >
+      Rupturas de publicação CONHECIDAS e investigadas. Os testes de salto e de subcota que some
+      ignoram só o que está aqui; qualquer ruptura nova quebra o build até alguém investigar e
+      registrar. A primeira ruptura encerra a janela "comparável" usada nos rankings.
+    columns:
+      - name: num_subcota
+        tests: [not_null]
