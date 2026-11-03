@@ -36,7 +36,9 @@ def carregar():
                 select min(competencia), max(competencia), count(distinct competencia)
                 from gold.fct_gasto_mensal_parlamentar where is_competencia_comparavel""").fetchone(),
             "ultima_pub": con.execute("select max(competencia) from silver.fct_lancamento_ceap").fetchone()[0],
-            "ruptura": con.execute("select * from silver.ruptura_publicacao").df(),
+            # a primeira ruptura é a que encerra a janela comparável (ver dim_calendario)
+            "ruptura": con.execute(
+                "select * from silver.ruptura_publicacao order by competencia_inicio").df(),
             "atualizado": con.execute("select max(ingerido_em) from silver.fct_lancamento_ceap").fetchone()[0],
         }
     finally:

@@ -1,2 +1,3 @@
 num_subcota,competencia_inicio,descricao,evidencia
 998,2025-08-01,"PASSAGEM AÉREA - SIGEPA deixa de ter débitos publicados nos CSVs","Mediana de R$ 3,5 mi/mês até jul/2025; a partir de ago/2025 só aparecem créditos residuais (−R$ 12,8 mil em ago/2025) e nenhum lançamento em 2026. CSVs baixados em 2026-09-28. Causa não verificada (atraso de publicação ou mudança de sistema)."
+5,2026-06-01,"DIVULGAÇÃO DA ATIVIDADE PARLAMENTAR cai para cerca de 12% da mediana a partir de jun/2026","R$ 1,20 mi em jun/2026 contra mediana de R$ 10,17 mi nos 6 meses anteriores (download de 2026-11-03). Causa provável: vedação de gastos com divulgação nos 120 dias anteriores à eleição de 04/10/2026. Queda sazonal esperada em ano eleitoral, não erro de carga."

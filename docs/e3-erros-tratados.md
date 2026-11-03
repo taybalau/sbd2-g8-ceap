@@ -43,22 +43,23 @@
 | 17 | **Grafias diferentes de fornecedor** | 7.870 documentos (CNPJ ou CPF) com mais de um nome | `dim_fornecedor` agrega por documento (SCD tipo 1 justificado); quantidade de grafias registrada |
 | 18 | **Gabinetes sem gasto por 3+ meses** | 136 casos | Teste de aviso; lista guardada para conferência humana |
 | 19 | **Teto da cota varia por UF** | Comparar com a média nacional distorce o desvio | Média de referência calculada entre deputados da mesma UF no mesmo mês |
+| 20 | **Queda da subcota de divulgação em ano eleitoral** | Subcota 5 com R$ 1,20 mi em jun/2026 contra mediana de R$ 10,17 mi nos 6 meses anteriores (download de 2026-11-03) | `assert_subcota_sem_salto` barrou o build. Causa provável: vedação de gastos com divulgação nos 120 dias anteriores à eleição de 04/10/2026. Registrada em `seeds/ruptura_publicacao.csv`; não altera a janela do ranking |
 
 ## 3. Erros do próprio pipeline pegos durante o desenvolvimento
 
 | # | Erro | Como foi detectado | Correção |
 | :-- | :--- | :--- | :--- |
-| 20 | Diferença de 175 lançamentos entre a E1 (785.754) e a Bronze da E3 (785.929) | Comparação com a Bronze | Não é perda na carga da E1 (o INSERT de despesas não usa `DISTINCT`): os CSVs da Câmara mudam conforme a data do download. Em 2023, a E1 tinha 232.747 linhas, a Bronze 232.745 e um download de 2026-11-03 trouxe 232.754. A Bronze grava todas as linhas, e a reconciliação com o fato é obrigatória |
-| 21 | Vaivém falso de partido (A→B→A) no mês de transição | `assert_scd_janelas_contiguas` | Ordenação dentro do mês por continuidade (depois substituída pelo histórico oficial) |
-| 22 | Desvio não rateado em meses com gasto líquido zero | `assert_desvio_alocado_reconcilia` | Rateio igual entre versões quando o gasto do mês é zero |
-| 23 | Linha duplicada no ranking por variação de nome entre versões | `grao_unico` do `mart_desvio_parlamentar` | Nome e UF passam a vir da versão mais recente |
-| 24 | Gold não determinística entre execuções idênticas | Comparação de hash no backfill | Média e desvio em `DECIMAL` no lugar de ponto flutuante |
-| 25 | Partidos da 56ª (PSL, DEM) na trajetória partidária da 57ª | Revisão manual do resultado | Trajetória restrita às versões vigentes a partir de 01/02/2023 |
-| 26 | `docker compose` terminava "com sucesso" mesmo com a transformação reprovada, e a E3 não esperava o download dos CSVs | Teste de subida do zero em cópia limpa do repositório | `demo_falhas.py base` sai com erro se algum job falhar; `e3-pipeline` espera o serviço `ingestion` concluir |
+| 21 | Diferença de 175 lançamentos entre a E1 (785.754) e a Bronze da E3 (785.929) | Comparação com a Bronze | Não é perda na carga da E1 (o INSERT de despesas não usa `DISTINCT`): os CSVs da Câmara mudam conforme a data do download. Em 2023, a E1 tinha 232.747 linhas, a Bronze 232.745 e um download de 2026-11-03 trouxe 232.754. A Bronze grava todas as linhas, e a reconciliação com o fato é obrigatória |
+| 22 | Vaivém falso de partido (A→B→A) no mês de transição | `assert_scd_janelas_contiguas` | Ordenação dentro do mês por continuidade (depois substituída pelo histórico oficial) |
+| 23 | Desvio não rateado em meses com gasto líquido zero | `assert_desvio_alocado_reconcilia` | Rateio igual entre versões quando o gasto do mês é zero |
+| 24 | Linha duplicada no ranking por variação de nome entre versões | `grao_unico` do `mart_desvio_parlamentar` | Nome e UF passam a vir da versão mais recente |
+| 25 | Gold não determinística entre execuções idênticas | Comparação de hash no backfill | Média e desvio em `DECIMAL` no lugar de ponto flutuante |
+| 26 | Partidos da 56ª (PSL, DEM) na trajetória partidária da 57ª | Revisão manual do resultado | Trajetória restrita às versões vigentes a partir de 01/02/2023 |
+| 27 | `docker compose` terminava "com sucesso" mesmo com a transformação reprovada, e a E3 não esperava o download dos CSVs | Teste de subida do zero em cópia limpa do repositório | `demo_falhas.py base` sai com erro se algum job falhar; `e3-pipeline` espera o serviço `ingestion` concluir |
 
 ## 4. LGPD
 
 | # | Ponto | Tratamento |
 | :-- | :--- | :--- |
-| 27 | CPF do parlamentar no CSV | A coluna não é gravada, nem na Bronze. Ela entra no md5 de `_hash_lancamento`, e com os demais campos da Bronze o CPF pode ser recuperado por força bruta (~10⁹ valores possíveis). O dado já é publicado pela Câmara |
-| 28 | Nome de passageiro (assessores, pessoas físicas) | Mantido só na Bronze (cópia do dado público); não passa para Silver e Gold |
+| 28 | CPF do parlamentar no CSV | A coluna não é gravada, nem na Bronze. Ela entra no md5 de `_hash_lancamento`, e com os demais campos da Bronze o CPF pode ser recuperado por força bruta (~10⁹ valores possíveis). O dado já é publicado pela Câmara |
+| 29 | Nome de passageiro (assessores, pessoas físicas) | Mantido só na Bronze (cópia do dado público); não passa para Silver e Gold |
