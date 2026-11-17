@@ -52,6 +52,8 @@ nav:
       - "E3 · Estrela, testes, orquestração e painel": e3.md
       - "E3 · Erros tratados": e3-erros-tratados.md
       - "E3 · Consulta otimizada (EXPLAIN)": explain/README.md
+      - "E3 · Testes de dados": testes.md
+      - "E3 · Dicionário de dados": dicionario-de-dados.md
       - Perguntas de gestão: consultas.md
   - Governança:
       - Decisões (ADR):

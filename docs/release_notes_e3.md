@@ -34,14 +34,14 @@ Medidos sobre os CSVs da Câmara baixados em 2026-09-28 e o histórico da API ex
 | **Chave do fato** | `id_despesa` (`BIGSERIAL` da E1) | **`id_lancamento`** (hash de todos os campos de origem) | `ideDocumento` vale 0 em 30.357 linhas e se repete em até 9 |
 | **Camadas** | Delta Lake (fato + dimensões de QSA) | **Bronze, Silver e Gold** (dbt) | Linhagem completa até o painel |
 | **Partido do deputado** | Partido do CSV | **SCD tipo 2** pela data do gasto | Evita enviar **R$ 33,4 mi** ao partido errado; o CSV diverge do histórico em **173.413 lançamentos (22%)** |
-| **Testes de domínio** | 5 testes de aceite | **11 testes de domínio** + reconciliações e testes de SLA | 2 em severidade de aviso; os demais barram o build |
+| **Testes de dados** | 5 testes de aceite | **42 testes no `dbt build`** (esquema, volume, unicidade, integridade referencial, distribuição, domínio, SCD e SLA) + contratos de esquema em 6 tabelas | 3 em severidade de aviso; os demais barram o build. Lista completa em [Testes de dados](testes.md) |
 | **Consulta de desvio no PostgreSQL** | N/A | **~209 ms → ~33 ms** | **6,3x mais rápida**; páginas lidas **21.428 → 206**; resultado idêntico |
 | **Gold publicada** | N/A | 5 tabelas: **622**, **26**, **86.485**, **23.458** e **4** linhas | Arquivo `ceap.duckdb` com 128 MB |
 | **SLA da Gold** | N/A | **26 h** após a ingestão do CSV | Ingestão às 06:00, 2 h de margem para retry |
 | **Painel (memória)** | N/A | 56 MB em repouso · 259 MB carregado | ~700 MB a menos que o Metabase em repouso (~961 MB) |
 | **Painel (tempo até responder)** | N/A | 6 s | Metabase: 40 s |
 | **Backfill 2023 e 2024** | N/A | Hash da Gold **idêntico** | Só as partições pedidas ganham novo `_ingerido_em` |
-| **Erros tratados e documentados** | N/A | **29 itens** | 6 da orientação, 14 da fonte, 7 do pipeline e 2 de LGPD |
+| **Erros tratados e documentados** | N/A | **31 itens** | 6 da orientação, 14 da fonte, 9 do pipeline e 2 de LGPD |
 
 ---
 
@@ -65,7 +65,10 @@ Medidos sobre os CSVs da Câmara baixados em 2026-09-28 e o histórico da API ex
 
 ### 3. Testes que Verificam o que o Domínio Tem de Sujo
 
-Todos rodam no `dbt build`, com falhas em `auditoria` (`store_failures`).
+Todos rodam no `dbt build`, com falhas em `auditoria` (`store_failures`). A lista completa, por categoria e com o resultado da última execução, está em [Testes de dados](testes.md); as colunas e os tipos de cada tabela, no [Dicionário de dados](dicionario-de-dados.md).
+
+- **Esquema:** `not_null` nas chaves e contratos (`contract: enforced`) no fato e nas 5 tabelas Gold: coluna que some ou muda de tipo reprova o build.
+- **Dado faltante:** `assert_todos_os_anos_presentes` exige os 4 anos na Bronze e no fato.
 
 - **Reconciliação:** `assert_fato_reconcilia_com_bronze`, `assert_gold_reconcilia_com_fato`, `assert_desvio_alocado_reconcilia`.
 - **Valores:** `assert_negativo_somente_em_subcota_de_compensacao` e `assert_valor_inconsistente_sob_controle` (limite de 0,3%; hoje 0,12%).
@@ -117,7 +120,7 @@ Além disso, `orquestracao/backfill_dagster.py` executou o **backfill real pelo 
 - [**ADR-0006**](https://github.com/taybalau/sbd2-g8-ceap/blob/main/docs/adr/0006-orquestracao-falha-controlada-e-backfill.md): Orquestração com Dagster (retry, falha controlada e backfill por partição), em comparação com cron e Airflow.
 - [**ADR-0007**](https://github.com/taybalau/sbd2-g8-ceap/blob/main/docs/adr/0007-ferramenta-do-painel-analitico.md): Streamlit versionado em vez de Metabase ou Superset, com medições de memória e tempo.
 - [**E3_MODEL.md**](E3_MODEL.md): Documento técnico completo da E3.
-- [**e3.md**](https://github.com/taybalau/sbd2-g8-ceap/blob/main/docs/e3.md) e [**e3-erros-tratados.md**](https://github.com/taybalau/sbd2-g8-ceap/blob/main/docs/e3-erros-tratados.md): documento de entrega e catálogo dos 29 erros tratados.
+- [**e3.md**](https://github.com/taybalau/sbd2-g8-ceap/blob/main/docs/e3.md) e [**e3-erros-tratados.md**](https://github.com/taybalau/sbd2-g8-ceap/blob/main/docs/e3-erros-tratados.md): documento de entrega e catálogo dos 31 erros tratados.
 
 ---
 
