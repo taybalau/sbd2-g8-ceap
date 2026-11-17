@@ -4,7 +4,7 @@
 **Disciplina:** Sistemas de Banco de Dados 2 (2026/2) — Universidade de Brasília (UnB)  
 **Squad:** G8 — Filipe Carvalho, Taynara Vitorino, Gabriel Esteves, Maria Clara Alves, Kaio Macedo, Amanda Gonçalves  
 **Tag Git:** `e3`  
-**Data de entrega:** DD/MM/2026 *(preencher)*  
+**Data de entrega:** 03/11/2026  
 **Repositório:** [https://github.com/taybalau/sbd2-g8-ceap](https://github.com/taybalau/sbd2-g8-ceap)
 
 ---
@@ -81,11 +81,11 @@ Todos rodam no `dbt build`, com falhas em `auditoria` (`store_failures`).
 - A coleta do histórico faz uma sondagem antes das ~860 requisições e **não grava nada** se mais de 1% dos deputados ficar sem histórico.
 - Dois jobs: `ingestao_ceap` (particionado) e `transformacao`. O sensor `transforma_apos_ingestao` só dispara após ingestão bem-sucedida.
 - Schedule `diario_ano_corrente` às 06:00; anos fechados por backfill sob demanda.
-- Cada teste do dbt é um asset check; teste reprovado pula os modelos a jusante e a Gold anterior permanece.
+- Os testes genéricos do dbt aparecem como asset checks no Dagster; os testes singulares que cruzam vários modelos rodam no mesmo `dbt build`. Teste reprovado pula os modelos a jusante e a Gold anterior permanece.
 
 ### 5. Falhas Provocadas e Backfill (`orquestracao/demo_falhas.py`)
 
-Cinco cenários, com evidências em `orquestracao/evidencias/*.json`:
+Quatro falhas provocadas e um backfill, com evidências em `orquestracao/evidencias/*.json`:
 
 - **`retry`:** duas leituras de `Ano-2025.csv` falham e o run conclui com sucesso.
 - **`fonte_fora`:** falha após 3 retries; Bronze e Gold inalteradas.
@@ -116,7 +116,7 @@ Além disso, `orquestracao/backfill_dagster.py` executou o **backfill real pelo 
 - [**ADR-0005**](https://github.com/taybalau/sbd2-g8-ceap/blob/main/docs/adr/0005-modelagem-dimensional-granularidade-scd-ceap.md): Modelagem dimensional, granularidade e SCD.
 - [**ADR-0006**](https://github.com/taybalau/sbd2-g8-ceap/blob/main/docs/adr/0006-orquestracao-falha-controlada-e-backfill.md): Orquestração com Dagster (retry, falha controlada e backfill por partição), em comparação com cron e Airflow.
 - [**ADR-0007**](https://github.com/taybalau/sbd2-g8-ceap/blob/main/docs/adr/0007-ferramenta-do-painel-analitico.md): Streamlit versionado em vez de Metabase ou Superset, com medições de memória e tempo.
-- [**PIPELINE_E3.md**](https://github.com/taybalau/sbd2-g8-ceap/blob/main/docs/PIPELINE_E3.md): Documento técnico completo da E3.
+- [**E3_MODEL.md**](E3_MODEL.md): Documento técnico completo da E3.
 - [**e3.md**](https://github.com/taybalau/sbd2-g8-ceap/blob/main/docs/e3.md) e [**e3-erros-tratados.md**](https://github.com/taybalau/sbd2-g8-ceap/blob/main/docs/e3-erros-tratados.md): documento de entrega e catálogo dos 29 erros tratados.
 
 ---
@@ -127,7 +127,7 @@ Além disso, `orquestracao/backfill_dagster.py` executou o **backfill real pelo 
 |:--|:--|
 | **Fato com chave herdada da E1** (`BIGSERIAL`, que conta linhas carregadas e não identifica o lançamento) | **Grão redefinido** para "lançamento publicado" com chave `id_lancamento` (hash de todos os campos de origem), testada e reconciliada com a Bronze. |
 | **Partido do deputado vindo do CSV**, que regrava o valor atual | **SCD tipo 2** a partir do histórico oficial, com teste de regressão sobre o caso 204494 e medição do erro evitado (R$ 33,4 mi). |
-| **Pipeline sem orquestração que falhe** | **Dagster** com retry, sensor, schedule e cinco cenários de falha provocados, mais backfill real. |
+| **Pipeline sem orquestração que falhe** | **Dagster** com retry, sensor, schedule e quatro falhas provocadas, mais backfill em processo e backfill real pelo daemon. |
 | **Dados sem camada de consumo** | **Gold** com marts e **painel** que responde à pergunta de gestão, com SLA e freshness declarados. |
 | **Qualidade dependente de inspeção manual** | **Testes de domínio** no `dbt build` que barram a publicação e gravam as falhas em `auditoria`. |
 
@@ -170,16 +170,17 @@ Acesse `http://localhost:8501`. O painel sobe pronto, sem configuração manual,
 
 ### Passo 4 — Reproduzir as evidências de falha e backfill
 
-```
-python orquestracao/demo_falhas.py            # retry, fonte_fora, api_fora, dado_sujo e backfill
-python orquestracao/backfill_dagster.py       # backfill real de 2023 e 2024 pelo daemon do Dagster
-```
-
-Para explorar o grafo, as execuções e o backfill pela interface:
+Com a plataforma no ar (passo 2):
 
 ```
-.venv/bin/dagster dev -f orquestracao/definitions.py   # http://localhost:3000
+# retry, fonte_fora, api_fora, dado_sujo e backfill
+docker compose run --rm --no-deps e3-pipeline python orquestracao/demo_falhas.py retry fonte_fora api_fora dado_sujo backfill
+
+# backfill real de 2023 e 2024 pelo daemon do Dagster
+docker compose exec e3-dagster python orquestracao/backfill_dagster.py
 ```
+
+O grafo, as execuções e o backfill ficam na interface do Dagster, em `http://localhost:3000`.
 
 ### Passo 5 — Reproduzir as medições do painel (ADR-0007)
 
@@ -224,4 +225,4 @@ As decisões arquiteturais da E3 serão reabertas caso:
 
 ## 8. Uso de IA
 
-O uso de IA no desenvolvimento desta entrega está formalizado em [`AI-USAGE.md`](https://github.com/taybalau/sbd2-g8-ceap/blob/main/docs/AI-USAGE.md) e em [Uso de IA](https://taybalau.github.io/sbd2-g8-ceap/ia/). 
+O uso de IA no desenvolvimento desta entrega está formalizado em [`AI-USAGE.md`](https://github.com/taybalau/sbd2-g8-ceap/blob/main/AI-USAGE.md) e em [Uso de IA](https://taybalau.github.io/sbd2-g8-ceap/ia/). 
