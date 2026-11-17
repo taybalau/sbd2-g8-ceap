@@ -12,9 +12,43 @@ sources:
           error_after: {count: 48, period: hour}
         loaded_at_field: "_ingerido_em::timestamptz"
         columns:
+          - {name: txNomeParlamentar, description: "Nome parlamentar do deputado, ou nome da liderança (ex.: LIDERANÇA DO PT)."}
+          - {name: ideCadastro, description: "Identificador do deputado no cadastro da Câmara; é o id da API de dados abertos. Vazio para lideranças."}
+          - {name: nuCarteiraParlamentar, description: "Número da carteira parlamentar. Vazio para lideranças."}
+          - {name: nuLegislatura, description: "Ano de início da legislatura (2023 para a 57ª)."}
+          - {name: sgUF, description: "UF do deputado, como publicada (NA para lideranças)."}
+          - {name: sgPartido, description: "Partido do deputado, como publicado. A Câmara regrava com o partido ATUAL; não serve para histórico."}
+          - {name: codLegislatura, description: "Número da legislatura (56 ou 57 no período)."}
+          - {name: numSubCota, description: "Código da subcota (categoria de despesa da CEAP)."}
+          - {name: txtDescricao, description: "Descrição da subcota."}
+          - {name: numEspecificacaoSubCota, description: "Código da especificação dentro da subcota (0 quando não há)."}
+          - {name: txtDescricaoEspecificacao, description: "Descrição da especificação (ex.: combustível para veículos ou aeronaves)."}
+          - {name: txtFornecedor, description: "Nome do fornecedor ou prestador, como digitado no documento."}
+          - {name: txtCNPJCPF, description: "CNPJ ou CPF do fornecedor, com ou sem máscara. Vazio em passagens do SIGEPA e auxílio-moradia."}
+          - {name: txtNumero, description: "Número do documento fiscal."}
+          - {name: indTipoDocumento, description: "Tipo do documento: 0 nota fiscal, 1 recibo, 2 despesa no exterior, 4 nota fiscal eletrônica."}
+          - {name: datEmissao, description: "Data e hora de emissão do documento. Vazia em 28.496 lançamentos (telefonia, SIGEPA)."}
+          - {name: vlrDocumento, description: "Valor total do documento, em reais."}
+          - {name: vlrGlosa, description: "Valor glosado (não reembolsado), em reais."}
+          - {name: vlrLiquido, description: "Valor efetivamente debitado da cota, em reais. Negativo em créditos e compensações."}
+          - {name: numMes, description: "Mês de competência do lançamento."}
+          - {name: numAno, description: "Ano de competência do lançamento."}
+          - {name: numParcela, description: "Número da parcela, em despesas parceladas (0 quando não há)."}
+          - {name: txtPassageiro, description: "Nome do passageiro em passagens aéreas. Dado pessoal: fica só na Bronze."}
+          - {name: txtTrecho, description: "Trecho da viagem em passagens aéreas (ex.: BSB/GRU)."}
+          - {name: numLote, description: "Número do lote de processamento na Câmara."}
+          - {name: numRessarcimento, description: "Número do ressarcimento na Câmara."}
+          - {name: datPagamentoRestituicao, description: "Data em que o valor foi restituído aos cofres públicos, quando houve."}
+          - {name: vlrRestituicao, description: "Valor restituído, em reais."}
+          - {name: nuDeputadoId, description: "Identificador numérico do deputado nos arquivos da CEAP (difere do ideCadastro)."}
+          - {name: ideDocumento, description: "Identificador do documento na Câmara. NÃO é chave: vale 0 em 30.357 linhas e se repete em até 9."}
+          - {name: urlDocumento, description: "Link para a imagem do documento no portal da Câmara."}
           - name: _hash_lancamento
             description: "md5 de todos os campos de origem; identifica a linha publicada."
             tests: [unique, not_null]
+          - {name: _arquivo_origem, description: "Nome do CSV de onde a linha veio (ex.: Ano-2025.csv)."}
+          - {name: _ingerido_em, description: "Momento (UTC) em que a partição foi gravada na Bronze. Base da freshness."}
+          - {name: ano_arquivo, description: "Ano do arquivo; é a partição Delta (reprocessar um ano substitui só ela)."}
       - name: camara_deputado_historico
         description: >
           Uma linha por evento do histórico do deputado (GET /deputados/{id}/historico).
@@ -25,3 +59,18 @@ sources:
           warn_after: {count: 7, period: day}
           error_after: {count: 30, period: day}
         loaded_at_field: "_extraido_em::timestamptz"
+        columns:
+          - {name: id, description: "ideCadastro do deputado (id da API)."}
+          - {name: nome, description: "Nome civil do deputado."}
+          - {name: nomeEleitoral, description: "Nome eleitoral do deputado."}
+          - {name: siglaPartido, description: "Partido do deputado a partir deste evento."}
+          - {name: siglaUf, description: "UF do deputado a partir deste evento."}
+          - {name: idLegislatura, description: "Legislatura do evento."}
+          - {name: dataHora, description: "Data e hora do evento (posse, licença, alteração de partido...)."}
+          - {name: situacao, description: "Situação do mandato após o evento (Exercício, Licença...)."}
+          - {name: condicaoEleitoral, description: "Titular ou suplente."}
+          - {name: descricaoStatus, description: "Descrição do evento (ex.: Alteração de partido)."}
+          - {name: _id_consultado, description: "ideCadastro usado na chamada à API."}
+          - {name: _ordem_evento, description: "Posição do evento na resposta da API; desempata eventos no mesmo instante."}
+          - {name: _extraido_em, description: "Momento (UTC) da extração. Base da freshness do histórico."}
+          - {name: _origem, description: "api ou cache (modo degradado CEAP_USAR_CACHE=1)."}

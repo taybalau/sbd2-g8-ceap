@@ -11,7 +11,11 @@ seeds:
       outra subcota quebra o teste assert_negativo_somente_em_subcota_de_compensacao e exige análise.
     columns:
       - name: num_subcota
+        description: "Código da subcota da CEAP."
         tests: [unique, not_null]
+      - {name: grupo_despesa, description: "Grupo da subcota usado nas análises (ex.: Passagens aéreas)."}
+      - {name: permite_valor_negativo, description: "Verdadeiro nas subcotas de compensação, onde valor negativo é legítimo."}
+      - {name: justificativa_negativo, description: "Por que a subcota pode ter valor negativo, com a evidência."}
   - name: ruptura_publicacao
     config:
       schema: silver
@@ -22,4 +26,8 @@ seeds:
       registrar. A primeira ruptura encerra a janela "comparável" usada nos rankings.
     columns:
       - name: num_subcota
+        description: "Subcota em que a ruptura foi observada."
         tests: [not_null]
+      - {name: competencia_inicio, description: "Primeira competência afetada. A partir dela, os testes de salto ignoram a subcota."}
+      - {name: descricao, description: "O que mudou na publicação."}
+      - {name: evidencia, description: "Números que mostram a ruptura e a causa provável (ou a indicação de que não foi verificada)."}
