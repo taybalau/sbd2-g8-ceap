@@ -1,0 +1,57 @@
+version: 2
+
+models:
+  - name: stg_ceap__lancamento
+    description: >
+      **Grão:** uma linha por lançamento publicado nos CSVs da CEAP (o mesmo da Bronze). Só tipagem
+      e renomeação; nenhuma linha é filtrada ou agregada.
+    meta: {grao: "lançamento publicado (id_lancamento)"}
+    columns:
+      - {name: id_lancamento, description: "Chave do lançamento: md5 de todos os campos de origem (o _hash_lancamento da Bronze)."}
+      - {name: id_deputado, description: "nuDeputadoId: identificador do deputado nos arquivos da CEAP."}
+      - {name: id_cadastro_camara, description: "ideCadastro: identificador do deputado na API da Câmara. Nulo para lideranças."}
+      - {name: is_lideranca, description: "Verdadeiro para contas de liderança partidária ou de governo (sem ideCadastro)."}
+      - {name: nome_parlamentar, description: "Nome parlamentar do deputado ou nome da liderança."}
+      - {name: sigla_partido_publicada, description: "Partido como publicado no CSV (já sobrescrito pela Câmara com o atual). Só para auditoria."}
+      - {name: sigla_uf_publicada, description: "UF como publicada no CSV (NA vira nulo)."}
+      - {name: codigo_legislatura, description: "Número da legislatura do lançamento (56 ou 57)."}
+      - {name: num_subcota, description: "Código da subcota (categoria de despesa)."}
+      - {name: descricao_subcota, description: "Descrição da subcota."}
+      - {name: num_especificacao, description: "Código da especificação dentro da subcota (nulo quando não há)."}
+      - {name: descricao_especificacao, description: "Descrição da especificação da subcota."}
+      - {name: nome_fornecedor_publicado, description: "Nome do fornecedor como digitado no documento."}
+      - {name: documento_fornecedor, description: "CNPJ (14 dígitos) ou CPF (11) do fornecedor, só dígitos. Nulo quando não informado."}
+      - {name: id_documento_camara, description: "ideDocumento (0 vira nulo). Não é chave: repete-se em bilhetes SIGEPA."}
+      - {name: numero_documento, description: "Número do documento fiscal."}
+      - {name: tipo_documento, description: "0 nota fiscal, 1 recibo, 2 despesa no exterior, 4 nota fiscal eletrônica."}
+      - {name: data_emissao, description: "Data de emissão do documento. Nula em 28.496 lançamentos."}
+      - {name: valor_documento, description: "Valor total do documento (R$)."}
+      - {name: valor_glosa, description: "Valor glosado, não reembolsado (R$). Vazio vira 0."}
+      - {name: valor_liquido, description: "Valor debitado da cota (R$). Negativo em créditos e compensações. É a medida somada em toda a Gold."}
+      - {name: valor_restituicao, description: "Valor restituído aos cofres públicos (R$), quando houve."}
+      - {name: data_pagamento_restituicao, description: "Data da restituição, quando houve."}
+      - {name: competencia, description: "Primeiro dia do mês de competência (mês a que a despesa se refere)."}
+      - {name: ano_competencia, description: "Ano de competência."}
+      - {name: mes_competencia, description: "Mês de competência (1 a 12)."}
+      - {name: parcela, description: "Número da parcela, em despesas parceladas (nulo quando não há)."}
+      - {name: trecho, description: "Trecho da viagem, em passagens aéreas."}
+      - {name: url_documento, description: "Link para a imagem do documento no portal da Câmara."}
+      - {name: arquivo_origem, description: "CSV de onde a linha veio (linhagem até a fonte pública)."}
+      - {name: ingerido_em, description: "Momento (UTC) em que a linha foi gravada na Bronze."}
+
+  - name: stg_camara__deputado_evento
+    description: >
+      **Grão:** um evento do histórico oficial de um deputado (posse, licença, alteração de partido),
+      só das legislaturas 56 e 57 e com partido preenchido.
+    meta: {grao: "evento do histórico (id_cadastro_camara, data_hora_evento, ordem_evento)"}
+    columns:
+      - {name: id_cadastro_camara, description: "ideCadastro do deputado (id da API da Câmara)."}
+      - {name: nome_parlamentar, description: "Nome civil do deputado, como na API."}
+      - {name: sigla_partido, description: "Partido do deputado a partir do evento."}
+      - {name: sigla_uf, description: "UF do deputado a partir do evento."}
+      - {name: id_legislatura, description: "Legislatura do evento (56 ou 57)."}
+      - {name: data_hora_evento, description: "Data e hora do evento."}
+      - {name: ordem_evento, description: "Posição do evento na resposta da API; desempata eventos no mesmo instante."}
+      - {name: situacao, description: "Situação do mandato após o evento (Exercício, Licença...)."}
+      - {name: descricao_status, description: "Descrição do evento (ex.: Alteração de partido)."}
+      - {name: extraido_em, description: "Momento (UTC) em que o histórico foi extraído da API."}

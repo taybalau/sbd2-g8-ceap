@@ -19,6 +19,8 @@ vars:
   # e a Gold publicada. A ingestão diária roda às 06:00; 2 h de margem para retry e reprocesso.
   sla_horas_gold: 26
   codigo_legislatura: 57
+  # Anos que a ingestão deve trazer (mesmo valor de ANOS no docker-compose.yml).
+  anos_esperados: [2023, 2024, 2025, 2026]
 
 models:
   ceap:

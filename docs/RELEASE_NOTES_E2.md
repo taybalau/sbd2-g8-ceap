@@ -55,7 +55,7 @@ A pergunta de gestão original da E1 ganha profundidade analítica na E2:
   - `wal_level = logical`
   - `max_replication_slots = 5`
   - `max_wal_senders = 5`
-- Migração [`003_setup_cdc_replication.sql`](migrations/003_setup_cdc_replication.sql) criando a publicação `ceap_cdc_publication` e definindo `REPLICA IDENTITY FULL` na tabela `despesa_ceap`.
+- Migração [`003_setup_cdc_replication.sql`](https://github.com/taybalau/sbd2-g8-ceap/blob/main/migrations/003_setup_cdc_replication.sql) criando a publicação `ceap_cdc_publication` e definindo `REPLICA IDENTITY FULL` na tabela `despesa_ceap`.
 - Consumidor CDC desenvolvido em Python/Rust sem dependência de clusters pesados de Kafka ou JVM:
   - Conecta-se à replicação do PostgreSQL e decodifica mutações (`INSERT` e `UPDATE`).
   - Executa operação de **`MERGE` atômico transacional** no Delta Lake:
@@ -96,9 +96,9 @@ Execução embutida no ciclo de vida que valida os 5 pilares de conformidade exi
 - **Teste 5 (Auditoria Societária UBO)**: Executa as queries analíticas de auditoria societária.
 
 ### 7. Governança e Decisões de Arquitetura (ADRs)
-- **[ADR-0002](docs/adr/0002-mecanismo-ingestao-e-formato-aberto.md)**: Escolha do Mecanismo de Ingestão (CDC vs Recarga Periódica) e Camada Analítica em Formato Aberto (Delta Lake / Parquet Zstandard).
-- **[ADR-0003](docs/adr/0003-resolucao-grafo-societario-beneficiario-final.md)**: Resolução de Grafo Societário e Beneficiário Final (UBO) para Auditoria da CEAP.
-- **[PIPELINE_E2.md](docs/PIPELINE_E2.md)**: Relatório técnico completo de engenharia da pipeline de dados.
+- **[ADR-0002](https://github.com/taybalau/sbd2-g8-ceap/blob/main/docs/adr/0002-mecanismo-ingestao-e-formato-aberto.md)**: Escolha do Mecanismo de Ingestão (CDC vs Recarga Periódica) e Camada Analítica em Formato Aberto (Delta Lake / Parquet Zstandard).
+- **[ADR-0003](https://github.com/taybalau/sbd2-g8-ceap/blob/main/docs/adr/0003-resolucao-grafo-societario-beneficiario-final.md)**: Resolução de Grafo Societário e Beneficiário Final (UBO) para Auditoria da CEAP.
+- **[PIPELINE_E2.md](https://github.com/taybalau/sbd2-g8-ceap/blob/main/docs/PIPELINE_E2.md)**: Relatório técnico completo de engenharia da pipeline de dados.
 - **Diários de Bordo**: Semanas 06 e 07 cobrindo todo o ciclo de desenvolvimento da E2.
 
 ---
@@ -226,4 +226,4 @@ As decisões arquiteturais da E2 serão reabertas caso:
 
 ## 8. Uso de IA
 
-O desenvolvimento desta entrega contou com o auxílio do assistente de código Google Antigravity, sob supervisão e validação da Squad G8 em todas as etapas de arquitetura, testes e documentação, conforme formalizado em [`AI-USAGE.md`](AI-USAGE.md).
+O desenvolvimento desta entrega contou com o auxílio do assistente de código Google Antigravity, sob supervisão e validação da Squad G8 em todas as etapas de arquitetura, testes e documentação, conforme formalizado em [`AI-USAGE.md`](https://github.com/taybalau/sbd2-g8-ceap/blob/main/AI-USAGE.md).

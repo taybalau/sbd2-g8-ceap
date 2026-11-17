@@ -1,73 +1,269 @@
 version: 2
 
 models:
-  - name: fct_lancamento_ceap
-    description: >
-      **Grão:** uma linha por lançamento publicado pela Câmara nos CSVs da CEAP (documento
-      fiscal, trecho de bilhete aéreo ou crédito/compensação). **Não** é "uma linha por
-      documento": ideDocumento se repete (até 9×) e vale 0 em 30.357 linhas.
-    meta:
-      grao: "lançamento publicado (id_lancamento)"
-      soma_segura: [valor_liquido, valor_documento, valor_glosa]
+- name: fct_lancamento_ceap
+  description: >
+    **Grão:** uma linha por lançamento publicado pela Câmara nos CSVs da CEAP (documento fiscal, trecho
+    de bilhete aéreo ou crédito/compensação). **Não** é "uma linha por documento": ideDocumento se repete
+    (até 9×) e vale 0 em 30.357 linhas.
+  meta:
+    grao: lançamento publicado (id_lancamento)
+    soma_segura:
+    - valor_liquido
+    - valor_documento
+    - valor_glosa
+  tests:
+  - grao_unico:
+      colunas:
+      - id_lancamento
+  columns:
+  - name: id_lancamento
+    description: 'Chave do lançamento: md5 de todos os campos de origem.'
+    data_type: varchar
     tests:
-      - grao_unico: {colunas: [id_lancamento]}
-    columns:
-      - name: id_lancamento
-        tests: [not_null]
-      - name: sk_parlamentar
-        description: "Versão SCD2 do parlamentar vigente na data do gasto (emissão; sem emissão, o 1º dia da competência)."
-        tests:
-          - not_null
-          - relationships: {to: ref('dim_parlamentar_scd'), field: sk_parlamentar}
-      - name: sk_fornecedor
-        tests:
-          - not_null
-          - relationships: {to: ref('dim_fornecedor'), field: sk_fornecedor}
-      - name: num_subcota
-        tests:
-          - relationships: {to: ref('dim_categoria_despesa'), field: num_subcota}
-      - name: data_emissao
-        description: "Nula em 28.496 lançamentos (telefonia, SIGEPA). Por isso a junção com o SCD usa coalesce(data_emissao, competencia)."
-        tests:
-          - relationships:
-              to: ref('dim_calendario')
-              field: data
-              config: {severity: warn}
-
-  - name: dim_parlamentar_scd
-    description: >
-      **Grão:** uma linha por versão do parlamentar (trecho contínuo com o mesmo partido e UF).
-      SCD tipo 2 construído do histórico oficial de eventos da Câmara (não do CSV, que é
-      regravado com o partido atual).
-    meta:
-      grao: "deputado × versão (sk_parlamentar)"
-      scd: 2
+    - not_null
+  - name: sk_parlamentar
+    description: >-
+      Versão SCD2 do parlamentar vigente na data do gasto (emissão; sem emissão, o 1º dia da competência).
+    data_type: varchar
     tests:
-      - grao_unico: {colunas: [sk_parlamentar]}
-      - grao_unico: {colunas: [id_deputado, numero_versao]}
-      - grao_unico: {colunas: [id_cadastro_camara, numero_versao], config: {where: "not is_lideranca"}}
-    columns:
-      - name: sk_parlamentar
-        tests: [not_null]
-
-  - name: dim_fornecedor
-    description: "**Grão:** uma linha por fornecedor (CNPJ/CPF; sem documento, pelo nome). SCD tipo 1 no nome, justificado no modelo."
-    meta: {grao: "fornecedor (sk_fornecedor)", scd: 1}
+    - not_null
+    - relationships:
+        to: ref('dim_parlamentar_scd')
+        field: sk_parlamentar
+  - name: sk_fornecedor
+    description: Chave do fornecedor em dim_fornecedor (md5 do documento ou, sem documento, do nome).
+    data_type: varchar
     tests:
-      - grao_unico: {colunas: [sk_fornecedor]}
-
-  - name: dim_categoria_despesa
-    description: "**Grão:** uma linha por subcota da CEAP."
-    meta: {grao: "subcota (num_subcota)"}
+    - not_null
+    - relationships:
+        to: ref('dim_fornecedor')
+        field: sk_fornecedor
+  - name: num_subcota
+    description: Subcota da despesa; liga com dim_categoria_despesa.
+    data_type: integer
     tests:
-      - grao_unico: {colunas: [num_subcota]}
-    columns:
-      - name: grupo_despesa
-        description: "Vem do seed regra_subcota. Nulo = subcota nova que ninguém classificou."
-        tests: [not_null]
-
-  - name: dim_calendario
-    description: "**Grão:** um dia civil."
-    meta: {grao: "dia (data)"}
+    - relationships:
+        to: ref('dim_categoria_despesa')
+        field: num_subcota
+  - name: id_deputado
+    description: nuDeputadoId do deputado ou da liderança.
+    data_type: integer
+  - name: data_emissao
+    description: >-
+      Nula em 28.496 lançamentos (telefonia, SIGEPA). Por isso a junção com o SCD usa coalesce(data_emissao,
+      competencia).
+    data_type: date
     tests:
-      - grao_unico: {colunas: [data]}
+    - relationships:
+        to: ref('dim_calendario')
+        field: data
+        config:
+          severity: warn
+  - name: data_referencia_scd
+    description: 'Data usada para escolher a versão do SCD: a emissão ou, sem ela, o 1º dia da competência.'
+    data_type: date
+  - name: competencia
+    description: Primeiro dia do mês de competência (mês a que a despesa se refere).
+    data_type: date
+  - name: ano_competencia
+    description: Ano de competência.
+    data_type: integer
+  - name: mes_competencia
+    description: Mês de competência (1 a 12).
+    data_type: integer
+  - name: codigo_legislatura
+    description: Número da legislatura do lançamento (56 ou 57).
+    data_type: integer
+  - name: sigla_partido_publicada
+    description: Partido como publicado no CSV (já sobrescrito pela Câmara com o atual). Só para auditoria.
+    data_type: varchar
+  - name: sigla_uf_publicada
+    description: UF como publicada no CSV (NA vira nulo).
+    data_type: varchar
+  - name: id_documento_camara
+    description: 'ideDocumento (0 vira nulo). Não é chave: repete-se em bilhetes SIGEPA.'
+    data_type: bigint
+  - name: numero_documento
+    description: Número do documento fiscal.
+    data_type: varchar
+  - name: tipo_documento
+    description: 0 nota fiscal, 1 recibo, 2 despesa no exterior, 4 nota fiscal eletrônica.
+    data_type: integer
+  - name: trecho
+    description: Trecho da viagem, em passagens aéreas.
+    data_type: varchar
+  - name: url_documento
+    description: Link para a imagem do documento no portal da Câmara.
+    data_type: varchar
+  - name: valor_documento
+    description: Valor total do documento (R$).
+    data_type: decimal(14,2)
+  - name: valor_glosa
+    description: Valor glosado, não reembolsado (R$). Vazio vira 0.
+    data_type: decimal(14,2)
+  - name: valor_liquido
+    description: >-
+      Valor debitado da cota (R$). Negativo em créditos e compensações. É a medida somada em toda a Gold.
+    data_type: decimal(14,2)
+  - name: valor_restituicao
+    description: Valor restituído aos cofres públicos (R$), quando houve.
+    data_type: decimal(14,2)
+  - name: is_lideranca
+    description: Verdadeiro para contas de liderança partidária ou de governo (sem ideCadastro).
+    data_type: boolean
+  - name: is_legislatura_alvo
+    description: Verdadeiro para lançamentos da 57ª Legislatura (jan/2023 é da 56ª).
+    data_type: boolean
+  - name: is_competencia_fechada
+    description: Verdadeiro se a competência já tem 4 meses de maturação (notas atrasadas já chegaram).
+    data_type: boolean
+  - name: is_competencia_comparavel
+    description: 'Fechada e anterior à primeira ruptura de publicação registrada: é a janela dos rankings.'
+    data_type: boolean
+  - name: is_credito
+    description: Verdadeiro quando valor_liquido < 0 (crédito ou compensação).
+    data_type: boolean
+  - name: is_valor_inconsistente
+    description: >-
+      Verdadeiro quando líquido ≠ documento − glosa (fora dos créditos de compensação). Sinalizado, não
+      descartado.
+    data_type: boolean
+  - name: arquivo_origem
+    description: CSV de onde a linha veio (linhagem até a fonte pública).
+    data_type: varchar
+  - name: ingerido_em
+    description: Momento (UTC) em que a linha foi gravada na Bronze.
+    data_type: timestamp with time zone
+  config:
+    contract:
+      enforced: true
+- name: dim_parlamentar_scd
+  description: >
+    **Grão:** uma linha por versão do parlamentar (trecho contínuo com o mesmo partido e UF). SCD tipo
+    2 construído do histórico oficial de eventos da Câmara (não do CSV, que é regravado com o partido
+    atual).
+  meta:
+    grao: deputado × versão (sk_parlamentar)
+    scd: 2
+  tests:
+  - grao_unico:
+      colunas:
+      - sk_parlamentar
+  - grao_unico:
+      colunas:
+      - id_deputado
+      - numero_versao
+  - grao_unico:
+      colunas:
+      - id_cadastro_camara
+      - numero_versao
+      config:
+        where: not is_lideranca
+  columns:
+  - name: sk_parlamentar
+    description: Chave substituta da versão do parlamentar.
+    tests:
+    - not_null
+  - name: id_deputado
+    description: nuDeputadoId do deputado ou da liderança.
+  - name: id_cadastro_camara
+    description: ideCadastro do deputado (nulo para lideranças).
+  - name: numero_versao
+    description: Ordem da versão do deputado (1 = a mais antiga).
+  - name: nome_parlamentar
+    description: Nome do deputado na versão (ou da liderança).
+  - name: sigla_partido
+    description: Partido vigente na versão, segundo o histórico oficial (nulo para lideranças).
+  - name: sigla_uf
+    description: UF vigente na versão (nula para lideranças).
+  - name: is_lideranca
+    description: Verdadeiro para contas de liderança, que têm uma versão única sem partido.
+  - name: data_inicio_real
+    description: Data do evento que abriu a versão (a primeira versão é estendida para trás em valido_de).
+  - name: evento_de_abertura
+    description: 'Evento que abriu a versão (ex.: Posse, Alteração de partido).'
+  - name: valido_de
+    description: Início da vigência da versão (inclusive). A primeira versão começa em 1900-01-01.
+  - name: valido_ate
+    description: Fim da vigência (exclusive). A versão atual vai até 9999-12-31.
+  - name: is_atual
+    description: Verdadeiro na versão vigente hoje.
+  - name: total_versoes
+    description: Quantidade de versões do deputado.
+- name: dim_fornecedor
+  description: >-
+    **Grão:** uma linha por fornecedor (CNPJ/CPF; sem documento, pelo nome). SCD tipo 1 no nome, justificado
+    no modelo.
+  meta:
+    grao: fornecedor (sk_fornecedor)
+    scd: 1
+  tests:
+  - grao_unico:
+      colunas:
+      - sk_fornecedor
+  columns:
+  - name: sk_fornecedor
+    description: 'Chave do fornecedor: md5 de chave_fornecedor.'
+  - name: chave_fornecedor
+    description: Documento (só dígitos) ou, sem documento, 'SEM-DOC:' + nome em maiúsculas.
+  - name: documento_fornecedor
+    description: CNPJ (14 dígitos) ou CPF (11) do fornecedor, só dígitos. Nulo quando não informado.
+  - name: tipo_documento_fornecedor
+    description: CNPJ, CPF, OUTRO ou SEM DOCUMENTO.
+  - name: nome_fornecedor
+    description: >-
+      Grafia mais frequente do nome (SCD tipo 1: o nome é sobrescrito, as séries usam o documento).
+  - name: qtd_grafias_nome
+    description: Quantas grafias diferentes do nome foram publicadas para o mesmo documento.
+  - name: primeira_competencia
+    description: Primeira competência com gasto no fornecedor.
+  - name: ultima_competencia
+    description: Última competência com gasto no fornecedor.
+- name: dim_categoria_despesa
+  description: '**Grão:** uma linha por subcota da CEAP.'
+  meta:
+    grao: subcota (num_subcota)
+  tests:
+  - grao_unico:
+      colunas:
+      - num_subcota
+  columns:
+  - name: num_subcota
+    description: Código da subcota da CEAP.
+  - name: descricao_subcota
+    description: Descrição da subcota, como publicada.
+  - name: grupo_despesa
+    description: Grupo da subcota (seed regra_subcota). Nulo = subcota nova que ninguém classificou.
+    tests:
+    - not_null
+  - name: permite_valor_negativo
+    description: >-
+      Verdadeiro nas subcotas de compensação (40, 996, 998, 999), onde valor negativo é legítimo.
+  - name: justificativa_negativo
+    description: Por que a subcota pode ter valor negativo, com a evidência.
+- name: dim_calendario
+  description: '**Grão:** um dia civil.'
+  meta:
+    grao: dia (data)
+  tests:
+  - grao_unico:
+      colunas:
+      - data
+  columns:
+  - name: data
+    description: Dia civil (2022-01-01 a 2026-12-31).
+  - name: ano
+    description: Ano do dia.
+  - name: mes
+    description: Mês do dia (1 a 12).
+  - name: competencia
+    description: Primeiro dia do mês do dia.
+  - name: dia_semana_iso
+    description: Dia da semana ISO (1 = segunda, 7 = domingo).
+  - name: is_fim_de_semana
+    description: Verdadeiro aos sábados e domingos.
+  - name: is_competencia_fechada
+    description: Verdadeiro se o mês já tem 4 meses de maturação em relação à última competência publicada.
+  - name: is_competencia_comparavel
+    description: 'Fechado e anterior à primeira ruptura de publicação: é a janela dos rankings.'

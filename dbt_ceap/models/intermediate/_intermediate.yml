@@ -1,0 +1,16 @@
+version: 2
+
+models:
+  - name: int_parlamentar__versoes
+    description: >
+      **Grão:** uma versão do deputado: trecho contínuo no tempo com o mesmo partido e a mesma UF,
+      segundo o histórico oficial de eventos da Câmara. Base do SCD tipo 2.
+    meta: {grao: "deputado × versão (id_cadastro_camara, numero_versao)"}
+    columns:
+      - {name: id_cadastro_camara, description: "ideCadastro do deputado (id da API da Câmara)."}
+      - {name: numero_versao, description: "Ordem da versão do deputado (1 = a mais antiga)."}
+      - {name: nome_parlamentar, description: "Nome civil do deputado no evento que abriu a versão."}
+      - {name: sigla_partido, description: "Partido do deputado durante a versão, segundo o histórico oficial."}
+      - {name: sigla_uf, description: "UF do deputado durante a versão."}
+      - {name: inicio_versao, description: "Data e hora do evento que abriu a versão."}
+      - {name: evento_de_abertura, description: "Descrição do evento que abriu a versão (ex.: Posse, Alteração de partido)."}

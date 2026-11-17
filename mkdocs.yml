@@ -52,6 +52,8 @@ nav:
       - "E3 · Estrela, testes, orquestração e painel": e3.md
       - "E3 · Erros tratados": e3-erros-tratados.md
       - "E3 · Consulta otimizada (EXPLAIN)": explain/README.md
+      - "E3 · Testes de dados": testes.md
+      - "E3 · Dicionário de dados": dicionario-de-dados.md
       - Perguntas de gestão: consultas.md
   - Governança:
       - Decisões (ADR):
@@ -73,9 +75,11 @@ nav:
           - Semana 05: diario/semana-05.md
           - Semana 06: diario/semana-06.md
           - Semana 07: diario/semana-07.md
-          - Semanas 08 a 10: diario/semana-08.md
+          - Semana 08: diario/semana-08.md
+          - Semana 09: diario/semana-09.md
+          - Semana 10: diario/semana-10.md
       - Uso de IA: ia.md
-  - "Release Notes (E1)": release-notes.md
+  - "Release Notes (E1 e E2)": release-notes.md
   - "Release Notes (E2)": RELEASE_NOTES_E2.md
   - "Release Notes (E3)": release_notes_e3.md
 

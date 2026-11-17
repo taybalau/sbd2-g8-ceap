@@ -60,7 +60,8 @@ Documento completo: [docs/e3.md](docs/e3.md) · ADRs [0004](docs/adr/0004-avalia
 
 - **Direct-to-Lakehouse:** CSV da Câmara → Bronze Delta (`ingestao/bronze.py`, partição por ano, idempotente) + histórico oficial de deputados via API (`ingestao/bronze_historico.py`).
 - **dbt (`dbt_ceap/`):** fato `fct_lancamento_ceap` com grão declarado (uma linha por lançamento publicado), `dim_parlamentar_scd` (SCD tipo 2 a partir do histórico oficial, porque o CSV regrava o partido atual) e marts Gold que respondem à pergunta de gestão.
-- **Testes de domínio:** negativo fora de subcota de compensação, salto de série por subcota, subcota que some entre anos, reconciliação Bronze ↔ fato ↔ Gold e regressão do SCD com caso real.
+- **Testes de dados (42, no `dbt build`):** esquema (incluindo contratos que fixam colunas e tipos das tabelas de consumo), volume, unicidade, integridade referencial, distribuição e os testes de domínio: negativo fora de subcota de compensação, salto de série por subcota, subcota que some entre anos, ano faltando, reconciliação Bronze ↔ fato ↔ Gold e regressão do SCD com caso real. Lista completa em [docs/testes.md](docs/testes.md).
+- **Dicionário de dados:** todas as tabelas da Bronze, Silver e Gold, com tipo e descrição de cada coluna, em [docs/dicionario-de-dados.md](docs/dicionario-de-dados.md) (gerado por `scripts/gerar_docs_e3.sh`).
 - **Dagster (`orquestracao/`):** retry com backoff, falha de fonte sem propagação e backfill por ano. Tudo isso é exercitado por `orquestracao/demo_falhas.py`.
 - **Painel (`painel/app.py`):** três blocos, um por parte da pergunta (Streamlit; justificativa no ADR-0007).
 - **Freshness e SLA:** Gold publicada até 26 h após a ingestão (`gold.mart_freshness_gold`, teste `assert_gold_dentro_do_sla`).

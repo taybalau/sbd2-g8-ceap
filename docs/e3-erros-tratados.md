@@ -57,10 +57,12 @@
 | 25 | Gold não determinística entre execuções idênticas | Comparação de hash no backfill | Média e desvio em `DECIMAL` no lugar de ponto flutuante |
 | 26 | Partidos da 56ª (PSL, DEM) na trajetória partidária da 57ª | Revisão manual do resultado | Trajetória restrita às versões vigentes a partir de 01/02/2023 |
 | 27 | `docker compose` terminava "com sucesso" mesmo com a transformação reprovada, e a E3 não esperava o download dos CSVs | Teste de subida do zero em cópia limpa do repositório | `demo_falhas.py base` sai com erro se algum job falhar; `e3-pipeline` espera o serviço `ingestion` concluir |
+| 28 | Teste do total reprovando por uma ruptura já registrada | `assert_serie_mensal_sem_salto` reprovou jul/2026 (total a 0,58 da mediana) no download de 2026-11-17 e pulou a Gold | O total passou a somar só as subcotas sem ruptura registrada; sem a divulgação, jul/2026 fica normal. As subcotas com ruptura seguem vigiadas uma a uma por `assert_subcota_sem_salto` |
+| 29 | Ano inteiro faltando passaria despercebido | Revisão dos testes de volume | Novo teste `assert_todos_os_anos_presentes`: cada ano esperado precisa estar na Bronze e no fato |
 
 ## 4. LGPD
 
 | # | Ponto | Tratamento |
 | :-- | :--- | :--- |
-| 28 | CPF do parlamentar no CSV | A coluna não é gravada, nem na Bronze. Ela entra no md5 de `_hash_lancamento`, e com os demais campos da Bronze o CPF pode ser recuperado por força bruta (~10⁹ valores possíveis). O dado já é publicado pela Câmara |
-| 29 | Nome de passageiro (assessores, pessoas físicas) | Mantido só na Bronze (cópia do dado público); não passa para Silver e Gold |
+| 30 | CPF do parlamentar no CSV | A coluna não é gravada, nem na Bronze. Ela entra no md5 de `_hash_lancamento`, e com os demais campos da Bronze o CPF pode ser recuperado por força bruta (~10⁹ valores possíveis). O dado já é publicado pela Câmara |
+| 31 | Nome de passageiro (assessores, pessoas físicas) | Mantido só na Bronze (cópia do dado público); não passa para Silver e Gold |

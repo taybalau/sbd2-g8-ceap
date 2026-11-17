@@ -70,17 +70,19 @@ A Entrega E3 fecha o ciclo da plataforma CEAP da 57ª Legislatura: transforma o 
  └───────────────────────────────────────┬────────────────────────────────────────────────┘
                                          ▼
  ┌────────────────────────────────────────────────────────────────────────────────────────┐
- │  SILVER (dbt)                                                                          │
- │  `stg_ceap__lancamento`   `stg_camara__deputado_evento` ─► `int_parlamentar__versoes`  │
+ │  SILVER (dbt, schema `silver` em `ceap.duckdb`)                                        │
+ │  Staging:    `stg_ceap__lancamento` · `stg_camara__deputado_evento`                    │
+ │  Intermed.:  `int_parlamentar__versoes`                                                │
+ │  Dimensões:  `dim_parlamentar_scd` (SCD 2) · `dim_fornecedor` (tipo 1)                 │
+ │              `dim_categoria_despesa` · `dim_calendario`                                │
+ │  Fato:       `fct_lancamento_ceap` (grão: lançamento publicado)                        │
  └───────────────────────────────────────┬────────────────────────────────────────────────┘
                                          ▼
  ┌────────────────────────────────────────────────────────────────────────────────────────┐
- │  GOLD (dbt, DuckDB `ceap.duckdb`)                                                      │
- │  Dimensões: `dim_parlamentar_scd` (SCD 2) · `dim_fornecedor` (tipo 1)                  │
- │             `dim_categoria_despesa` · `dim_calendario`                                 │
- │  Fatos:     `fct_lancamento_ceap` ─► `fct_gasto_mensal_parlamentar`                    │
- │  Marts:     `mart_desvio_parlamentar` · `mart_desvio_partido`                          │
- │             `mart_concentracao_parlamentar` · `mart_freshness_gold`                    │
+ │  GOLD (dbt, schema `gold`: tabelas de consumo)                                         │
+ │  Fato mensal: `fct_gasto_mensal_parlamentar`                                           │
+ │  Marts:       `mart_desvio_parlamentar` · `mart_desvio_partido`                        │
+ │               `mart_concentracao_parlamentar` · `mart_freshness_gold`                  │
  └───────────────────────────────────────┬────────────────────────────────────────────────┘
                                          ▼
  ┌────────────────────────────────────────────────────────────────────────────────────────┐
@@ -89,7 +91,7 @@ A Entrega E3 fecha o ciclo da plataforma CEAP da 57ª Legislatura: transforma o 
 
  Orquestração transversal (Dagster): jobs `ingestao_ceap` (particionado por ano) e
  `transformacao`; sensor `transforma_apos_ingestao`; schedule `diario_ano_corrente` (06:00).
- Cada teste dbt é um asset check; teste reprovado pula os modelos a jusante.
+ Testes genéricos do dbt viram asset checks; teste reprovado pula os modelos a jusante.
 ```
 
 O fluxo mantém duas propriedades ao longo de todo o desenho: **falha de dependência nunca publica dado novo** (a Gold anterior permanece intacta) e **reprocessar uma partição não altera as demais** (a Gold sai com hash idêntico).
@@ -172,7 +174,7 @@ Todas as agregações são por documento (CNPJ/CPF), então sobrescrever a grafi
 
 ### 5. Testes que Verificam o que o Domínio Tem de Sujo
 
-Todos rodam no `dbt build`. As falhas ficam gravadas no schema `auditoria` (`store_failures`).
+Todos rodam no `dbt build`. As falhas ficam gravadas no schema `auditoria` (`store_failures`). A lista completa, com os testes genéricos, os contratos de esquema e o resultado da última execução, está em [Testes de dados](testes.md).
 
 | Teste | O que pega | Achado real nos dados |
 |---|---|---|
@@ -180,7 +182,7 @@ Todos rodam no `dbt build`. As falhas ficam gravadas no schema `auditoria` (`sto
 | `assert_gold_reconcilia_com_fato` | Gold que não soma exatamente o fato | — |
 | `assert_negativo_somente_em_subcota_de_compensacao` | valor negativo onde não cabe | negativos só nas subcotas 40, 996, 998 e 999 (créditos de bilhete e devolução de auxílio-moradia), regra em `seeds/regra_subcota.csv` |
 | `assert_subcota_sem_salto` | salto de série **por subcota** | **ago/2025: a subcota 998 (SIGEPA, mediana de R$ 3,5 mi/mês) some.** O teste do total não pegou, porque o total caiu só 21% |
-| `assert_serie_mensal_sem_salto` / `_sem_lacuna` | degrau ou mês ausente no total e no nº de deputados | calibrado: razão do gasto entre 0,75 e 1,35 e do nº de deputados entre 0,98 e 1,03 nos meses fechados |
+| `assert_serie_mensal_sem_salto` / `_sem_lacuna` | degrau ou mês ausente no total e no nº de deputados | calibrado: razão do gasto entre 0,74 e 1,21 e do nº de deputados entre 0,98 e 1,03 nos meses fechados. O total usa só as subcotas sem ruptura registrada; **jul/2026:** com a divulgação incluída, o total caiu a 0,58 da mediana (período eleitoral) e reprovou o build até o teste passar a respeitar o seed de rupturas |
 | `assert_subcota_nao_some_entre_anos` | subcota relevante que desaparece no ano seguinte | 998 some em 2026 (mesma ruptura) |
 | `assert_scd_preserva_partido_da_epoca` | junção do fato com o SCD só por id (pegaria o partido atual) | — |
 | `assert_scd_caso_conhecido_204494` | regressão com caso verificado na API | — |
@@ -201,7 +203,7 @@ Todos rodam no `dbt build`. As falhas ficam gravadas no schema `auditoria` (`sto
 | Critério | Cron + scripts (opção nula) | Airflow | **Dagster + dagster-dbt (escolhida)** |
 |---|---|---|---|
 | Unidade do grafo | tarefa | tarefa | **asset (tabela)** |
-| Testes do dbt no grafo | não | tarefa opaca | **cada teste vira asset check** |
+| Testes do dbt no grafo | não | tarefa opaca | **testes genéricos viram asset checks** |
 | Backfill por ano | laço manual | por data de execução | **partição estática por ano** |
 | Linhagem Bronze → Gold | inexistente | só entre tarefas | **um grafo só** |
 | Peso para rodar local | mínimo | scheduler + webserver + banco | `dagster dev` num processo |
@@ -213,7 +215,7 @@ O Airflow foi descartado porque seu particionamento é por data de execução, e
 - Dois jobs: `ingestao_ceap` (particionado por ano) e `transformacao`.
 - O sensor `transforma_apos_ingestao` só dispara a transformação após ingestão **bem-sucedida**.
 - Schedule `diario_ano_corrente`: reingere só o ano corrente, às 06:00. Anos fechados são reprocessados por backfill sob demanda.
-- Modelos dbt carregados como assets e executados com `dbt build`: teste reprovado pula os modelos a jusante.
+- Modelos dbt carregados como assets e executados com `dbt build`: teste reprovado pula os modelos a jusante. Os testes genéricos aparecem como asset checks no Dagster; os singulares que cruzam vários modelos rodam no mesmo `dbt build`, mas não viram asset check.
 - `dagster.yaml` limita a uma execução simultânea, porque todos os jobs gravam o mesmo `ceap.duckdb`.
 
 #### 6.3. Cenários de falha provocados (`orquestracao/demo_falhas.py`)
@@ -375,6 +377,8 @@ O detalhamento completo está em [E3 · Erros tratados](e3-erros-tratados.md). R
 | 25 | Gold não determinística entre execuções idênticas | Comparação de hash no backfill | `DECIMAL` no lugar de ponto flutuante |
 | 26 | Partidos da 56ª (PSL, DEM) na trajetória da 57ª | Revisão manual | Trajetória restrita às versões vigentes a partir de 01/02/2023 |
 | 27 | `docker compose` terminava "com sucesso" mesmo com a transformação reprovada, e a E3 não esperava o download dos CSVs | Subida do zero em cópia limpa do repositório | `demo_falhas.py base` sai com erro se algum job falhar; `e3-pipeline` espera o serviço `ingestion` concluir |
+| 28 | Teste do total reprovando por uma ruptura já registrada (jul/2026, download de 2026-11-17) | `assert_serie_mensal_sem_salto` | O total soma só as subcotas sem ruptura registrada; as com ruptura seguem vigiadas por `assert_subcota_sem_salto` |
+| 29 | Ano inteiro faltando passaria despercebido | Revisão dos testes de volume | Novo teste `assert_todos_os_anos_presentes` |
 
 ---
 
@@ -417,7 +421,7 @@ bash scripts/medir_painel_streamlit.sh lakehouse   # medição do painel Streaml
 |---|---|---|
 | **Modelo analítico com fato e dimensão, granularidade declarada e ao menos uma dimensão de variação lenta** | Concluído | `fct_lancamento_ceap`, `fct_gasto_mensal_parlamentar`, `dim_parlamentar_scd` (SCD tipo 2), `dim_fornecedor`, `dim_categoria_despesa`, `dim_calendario`; grão em `meta.grao` com teste `grao_unico` (seção 3); ADR-0005. |
 | **Transformações versionadas em ferramenta declarativa (dbt ou SQLMesh), organizadas em camadas** | Concluído | Projeto dbt em `dbt_ceap/` (modelos `stg_`, `int_`, `dim_`, `fct_`, `mart_`), camadas Bronze, Silver e Gold (seção 1). |
-| **Testes de dados: esquema, volume, unicidade, integridade referencial e ao menos um de distribuição** | Concluído | Unicidade: `grao_unico`. Volume: `assert_fato_reconcilia_com_bronze`, `assert_gold_reconcilia_com_fato`, `assert_serie_mensal_sem_salto` / `assert_serie_mensal_sem_lacuna`. Integridade referencial: relacionamento com o calendário e junções do SCD. Esquema: classificação de subcota não nula (`grupo_despesa`). Distribuição: `assert_subcota_sem_salto` e limites de razão calibrados com os dados reais (seção 5). |
+| **Testes de dados: esquema, volume, unicidade, integridade referencial e ao menos um de distribuição** | Concluído | 42 testes no `dbt build`, todos listados com o resultado da última execução em [Testes de dados](testes.md). Esquema: `not_null` nas chaves e **contratos** (`contract: enforced`) nas 6 tabelas de consumo e no fato, que reprovam o build se uma coluna sumir ou mudar de tipo. Volume: `assert_fato_reconcilia_com_bronze`, `assert_gold_reconcilia_com_fato`, `assert_serie_mensal_sem_lacuna`, `assert_todos_os_anos_presentes`. Unicidade: `grao_unico` em todos os modelos e `unique` no hash da Bronze. Integridade referencial: 4 `relationships` do fato para parlamentar, fornecedor, categoria e calendário (este como aviso). Distribuição: `assert_subcota_sem_salto`, `assert_serie_mensal_sem_salto` e `assert_valor_inconsistente_sob_controle`. Colunas e tipos no [dicionário de dados](dicionario-de-dados.md). |
 | **Orquestração agendada com grafo de dependência, retry e backfill demonstrado** | Concluído | Dagster: schedule `diario_ano_corrente` (06:00), sensor `transforma_apos_ingestao`, `RetryPolicy` 3x com backoff exponencial, `orquestracao/demo_falhas.py`, `backfill_dagster.py` e `orquestracao/evidencias/*.json`; ADR-0006 (seção 6). |
 | **Ao menos uma consulta otimizada a partir do plano de execução, com `EXPLAIN (ANALYZE, BUFFERS)` antes e depois no repositório** | Concluído | `docs/explain/`: aproximadamente 209 ms para 33 ms e 21.428 para 206 páginas lidas, com resultado idêntico, utilizando o gasto mensal pré-agregado da migração 004 (seção 9). |
 | **Métrica de freshness e SLA declarado para ao menos uma tabela de consumo** | Concluído | SLA de 26 h para as tabelas de consumo da Gold; `gold.mart_freshness_gold`, `assert_gold_dentro_do_sla`, `dbt source freshness` e alerta no painel (seção 8.2). |
