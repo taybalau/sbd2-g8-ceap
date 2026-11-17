@@ -46,7 +46,7 @@ sequenceDiagram
 3. Lê `ANOS` (padrão `2023,2024,2025,2026`) e garante os CSVs com `ensure_data_available`.
 4. Executa a carga com `ingest_csv_files`.
 5. Roda o [painel de validação](consultas.md) com as seis perguntas.
-6. Segue para as etapas da E2: carga em lote no lakehouse, enriquecimento societário, consultas de auditoria e testes de aceite (ver [Arquitetura](arquitetura.md#etapas-do-mainpy)).
+6. Segue para as etapas da E2: carga em lote no lakehouse, enriquecimento societário, consultas de auditoria e testes de aceite (ver [Arquitetura](arquitetura.md#etapas-do-mainpy-e1e2)).
 
 ### `run_migrations.py` — migrações versionadas
 
