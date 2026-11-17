@@ -188,11 +188,11 @@ Uma linha por linha dos CSVs anuais da CEAP publicados pela Câmara. Coluna cpf 
 
 | Coluna | Tipo | Descrição |
 | :--- | :--- | :--- |
-| `id_cadastro_camara` | `INTEGER` | ideCadastro: identificador do deputado na API da Câmara. Nulo para lideranças. |
+| `id_cadastro_camara` | `INTEGER` | ideCadastro do deputado (id da API da Câmara). |
 | `numero_versao` | `HUGEINT` | Ordem da versão do deputado (1 = a mais antiga). |
-| `nome_parlamentar` | `VARCHAR` | Nome parlamentar do deputado ou nome da liderança. |
-| `sigla_partido` | `VARCHAR` | Partido do deputado a partir do evento. |
-| `sigla_uf` | `VARCHAR` | UF do deputado a partir do evento. |
+| `nome_parlamentar` | `VARCHAR` | Nome civil do deputado no evento que abriu a versão. |
+| `sigla_partido` | `VARCHAR` | Partido do deputado durante a versão, segundo o histórico oficial. |
+| `sigla_uf` | `VARCHAR` | UF do deputado durante a versão. |
 | `inicio_versao` | `TIMESTAMP` | Data e hora do evento que abriu a versão. |
 | `evento_de_abertura` | `VARCHAR` | Descrição do evento que abriu a versão (ex.: Posse, Alteração de partido). |
 
@@ -202,7 +202,7 @@ Uma linha por linha dos CSVs anuais da CEAP publicados pela Câmara. Coluna cpf 
 
 | Coluna | Tipo | Descrição |
 | :--- | :--- | :--- |
-| `id_cadastro_camara` | `INTEGER` | ideCadastro: identificador do deputado na API da Câmara. Nulo para lideranças. |
+| `id_cadastro_camara` | `INTEGER` | ideCadastro do deputado (id da API da Câmara). |
 | `nome_parlamentar` | `VARCHAR` | Nome civil do deputado, como na API. |
 | `sigla_partido` | `VARCHAR` | Partido do deputado a partir do evento. |
 | `sigla_uf` | `VARCHAR` | UF do deputado a partir do evento. |

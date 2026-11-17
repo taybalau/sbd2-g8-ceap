@@ -41,7 +41,8 @@ def main():
 
     # Glossário: a mesma coluna em vários modelos herda a descrição de onde ela foi escrita.
     glossario = {}
-    for no in list(manifest["nodes"].values()) + list(manifest["sources"].values()):
+    # Ordem fixa (por unique_id) para a página sair igual em toda execução.
+    for _, no in sorted(list(manifest["nodes"].items()) + list(manifest["sources"].items())):
         for c, info in no.get("columns", {}).items():
             if info.get("description"):
                 glossario.setdefault(c, info["description"])

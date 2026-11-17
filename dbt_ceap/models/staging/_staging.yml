@@ -45,6 +45,7 @@ models:
       só das legislaturas 56 e 57 e com partido preenchido.
     meta: {grao: "evento do histórico (id_cadastro_camara, data_hora_evento, ordem_evento)"}
     columns:
+      - {name: id_cadastro_camara, description: "ideCadastro do deputado (id da API da Câmara)."}
       - {name: nome_parlamentar, description: "Nome civil do deputado, como na API."}
       - {name: sigla_partido, description: "Partido do deputado a partir do evento."}
       - {name: sigla_uf, description: "UF do deputado a partir do evento."}
