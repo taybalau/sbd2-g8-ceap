@@ -10,6 +10,11 @@ A E3 responde à pergunta da E1:
 > gastos acima da média mensal da CEAP, e quais categorias e fornecedores concentram esses
 > recursos?*
 
+> **Mudança posterior à entrega (19/11/2026):** a "média mensal" da pergunta passou a ser
+> medida pela **mediana** do gasto mensal dos deputados da mesma UF, porque poucos gastos
+> individuais muito altos puxavam a média para cima. O z-score passou para a versão robusta
+> (MAD). Decisão e comparativo entre as duas referências: [ADR-0005, seção 9.5](adr/0005-modelagem-dimensional-granularidade-scd-ceap.md#95-mediana-no-lugar-da-média-como-referência-do-desvio).
+
 ```mermaid
 flowchart LR
     csv["CSV CEAP<br/>(Câmara)"] --> b1[("bronze/ceap_lancamento<br/>Delta, partição por ano")]
@@ -141,11 +146,11 @@ Cada modelo declara o grão na descrição e em `meta.grao`, e um teste `grao_un
 
 #### 3.3. Prevenção de dupla agregação
 
-No mart mensal, as colunas que se repetem entre as versões de um mesmo mês (`gasto_deputado_mes`, `media_uf_mes`, `desvio_deputado_mes`) estão listadas como `meta.soma_proibida`. Para somar por partido existe `desvio_alocado`, e o teste `assert_desvio_alocado_reconcilia` garante que o rateio fecha. Esse teste pegou um bug real durante o desenvolvimento: um mês com gasto líquido zero não rateava o desvio.
+No mart mensal, as colunas que se repetem entre as versões de um mesmo mês (`gasto_deputado_mes`, `mediana_uf_mes`, `desvio_deputado_mes`) estão listadas como `meta.soma_proibida`. Para somar por partido existe `desvio_alocado`, e o teste `assert_desvio_alocado_reconcilia` garante que o rateio fecha. Esse teste pegou um bug real durante o desenvolvimento: um mês com gasto líquido zero não rateava o desvio.
 
-#### 3.4. Média de referência por UF
+#### 3.4. Mediana de referência por UF
 
-O teto da cota varia por UF, então comparar com a média nacional distorce o desvio. A média de referência é calculada entre deputados **da mesma UF no mesmo mês**. Média e desvio usam `DECIMAL`, não ponto flutuante (ver seção 6.4).
+O teto da cota varia por UF, então comparar com um valor nacional distorce o desvio. A referência é calculada entre deputados **da mesma UF no mesmo mês** e, desde 19/11/2026, é a **mediana** do gasto mensal, não a média: poucos gastos individuais muito altos puxavam a média para cima e faziam a maioria dos deputados parecer abaixo dela. Pelo mesmo motivo, o z-score é o robusto, (gasto − mediana) ÷ (1,4826 × MAD), em que MAD é o desvio absoluto mediano. Na concentração por categoria, o excesso é medido contra a mediana dos deputados da UF na subcota, contando com zero quem não gastou nela. A referência e o desvio usam `DECIMAL`, não ponto flutuante (ver seção 6.4). Decisão e comparativo: ADR-0005, seção 9.5.
 
 ---
 
@@ -236,7 +241,7 @@ O `demo_falhas.py` não executa sensores. O disparo do sensor foi observado no b
 
 `orquestracao/backfill_dagster.py` (evidência em `orquestracao/evidencias/backfill_dagster.json`): o comando `dagster job backfill` submeteu as partições 2023 e 2024 ao daemon, que as executou uma de cada vez. Depois de cada ingestão bem-sucedida, o sensor disparou a transformação sozinho. Só 2023 e 2024 ganharam novo `_ingerido_em`, as contagens por ano não mudaram e a Gold saiu com hash idêntico. O schedule diário e o sensor sobem ligados por padrão.
 
-O hash idêntico só passou depois de uma correção: na primeira versão, a média da UF era `double`, e a ordem da soma entre threads mudava a 10ª casa decimal entre execuções. Média e desvio passaram a `DECIMAL`, e três builds seguidos produziram o mesmo hash.
+O hash idêntico só passou depois de uma correção: na primeira versão, a média da UF era `double`, e a ordem da soma entre threads mudava a 10ª casa decimal entre execuções. Média e desvio passaram a `DECIMAL`, e três builds seguidos produziram o mesmo hash. A mediana que substituiu a média (19/11) também é `DECIMAL`.
 
 #### 6.5. Consequências e gatilho de revisão
 
@@ -251,11 +256,11 @@ O hash idêntico só passou depois de uma correção: na primeira versão, a mé
 
 #### 7.1. Estrutura
 
-`painel/app.py` (202 linhas) tem **três blocos, um por parte da pergunta**. Cada bloco abre com a resposta em uma frase e tem um único gráfico:
+`painel/app.py` (207 linhas) tem **três blocos, um por parte da pergunta**. Cada bloco abre com a resposta em uma frase e tem um único gráfico:
 
-1. **Parlamentares:** ranking do desvio acumulado acima da média da UF (top 15).
+1. **Parlamentares:** ranking do desvio acumulado acima da mediana da UF (top 15).
 2. **Partidos:** desvio médio por deputado-mês, pelo partido **na data do gasto**, com a tabela do erro que a sobrescrita causaria.
-3. **Categorias e fornecedores:** para o parlamentar escolhido, a categoria que gera o desvio (excesso sobre a média da UF) e os 10 maiores fornecedores com a participação de cada um.
+3. **Categorias e fornecedores:** para o parlamentar escolhido, a categoria que gera o desvio (excesso sobre a mediana da UF) e os 10 maiores fornecedores com a participação de cada um.
 
 Limitações exibidas no próprio painel: janela comparável (fev/2023 a jul/2025), ruptura do SIGEPA e meses ainda em maturação. **Desvio não é irregularidade:** indica onde olhar primeiro.
 

@@ -54,7 +54,7 @@ Medidos sobre os CSVs da Câmara baixados em 2026-09-28 e o histórico da API ex
 - Dimensões: `dim_parlamentar_scd` (tipo 2), `dim_fornecedor` (tipo 1, decisão justificada), `dim_categoria_despesa` e `dim_calendario`.
 - Marts: `mart_desvio_parlamentar`, `mart_desvio_partido`, `mart_concentracao_parlamentar` e `mart_freshness_gold`.
 - **Prevenção de dupla agregação:** colunas repetidas entre versões do mesmo mês estão marcadas como `meta.soma_proibida`; para somar por partido existe `desvio_alocado`, cujo rateio é verificado por teste.
-- Média de referência calculada **por UF e mês**, porque o teto da cota varia por UF.
+- Referência calculada **por UF e mês**, porque o teto da cota varia por UF. Desde 19/11/2026 a referência é a **mediana** do gasto mensal da UF, e não a média (ADR-0005, seção 9.5).
 
 ### 2. Dimensão de Variação Lenta (SCD Tipo 2)
 
