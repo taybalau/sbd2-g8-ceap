@@ -5,6 +5,9 @@ Painel da E3 — responde à pergunta de gestão definida na E1, e só a ela:
    de gastos acima da média mensal da CEAP, e quais categorias e fornecedores concentram
    esses recursos?"
 
+"Média mensal" é medida pela MEDIANA do gasto mensal dos deputados da mesma UF (ADR-0005, 9.5):
+poucos gastos individuais muito altos distorciam a média.
+
 Três blocos, um por parte da pergunta. Lê somente a camada Gold (lakehouse/ceap.duckdb).
 Execução:  streamlit run painel/app.py
 """
@@ -76,9 +79,11 @@ except duckdb.Error as e:
     st.stop()
 
 ini, fim, n_meses = d["janela"]
-st.title("Quem gasta acima da média da CEAP — 57ª Legislatura")
+st.title("Quem gasta acima da mediana da CEAP — 57ª Legislatura")
 st.caption(
-    f"Comparação mês a mês com a média dos deputados da **mesma UF** (o teto da cota varia por estado). "
+    f"Comparação mês a mês com a **mediana** dos deputados da **mesma UF** (o teto da cota varia por estado). "
+    f"A mediana é o valor do meio: metade dos deputados da UF gastou menos e metade gastou mais, então "
+    f"poucos gastos muito altos não a distorcem. "
     f"Janela comparável: **{mes(ini)} a {mes(fim)}** ({n_meses} meses). "
     f"Dados da Câmara ingeridos em {pd.Timestamp(d['atualizado']).strftime('%d/%m/%Y %H:%M')}.")
 sla_horas, idade_horas = d["sla"]
@@ -100,22 +105,22 @@ with st.expander("Por que a janela termina antes de 2026?", expanded=False):
 # ------------------------------------------------------------ 1. parlamentares
 dep = d["dep"].sort_values("posicao_ranking")
 lider = dep.iloc[0]
-st.header("1. Parlamentares com maior desvio acima da média")
+st.header("1. Parlamentares com maior desvio acima da mediana")
 st.markdown(
     f"**{lider.nome_parlamentar} ({lider.partido_atual}-{lider.sigla_uf})** lidera: gastou em média "
-    f"**{brl(lider.gasto_medio_mensal)}/mês**, contra {brl(lider.media_uf_mensal)} da média da UF — "
-    f"{lider.desvio_relativo:+.0%}, acumulando **{brl(lider.desvio_acumulado)}** acima da média "
-    f"em {lider.meses_com_gasto} meses ({lider.meses_acima_media} deles acima).")
+    f"**{brl(lider.gasto_medio_mensal)}/mês**, contra {brl(lider.mediana_uf_mensal)} da mediana da UF — "
+    f"{lider.desvio_relativo:+.0%}, acumulando **{brl(lider.desvio_acumulado)}** acima da mediana "
+    f"em {lider.meses_com_gasto} meses ({lider.meses_acima_mediana} deles acima).")
 top = dep.head(15).assign(
     rotulo=lambda x: x.nome_parlamentar + " (" + x.partido_atual.fillna("—") + "-" + x.sigla_uf + ")",
-    gm=lambda x: x.gasto_medio_mensal.map(brl), mu=lambda x: x.media_uf_mensal.map(brl),
+    gm=lambda x: x.gasto_medio_mensal.map(brl), mu=lambda x: x.mediana_uf_mensal.map(brl),
     rel=lambda x: x.desvio_relativo.map(lambda v: f"{v:+.0%}"))
 st.plotly_chart(barras_h(top, "desvio_acumulado", "rotulo", AZUL, {
-    "cols": ["gm", "mu", "rel", "trajetoria_partidaria", "meses_acima_media"],
+    "cols": ["gm", "mu", "rel", "trajetoria_partidaria", "meses_acima_mediana"],
     "tpl": "<b>%{y}</b><br>Desvio acumulado: R$ %{x:,.0f}<br>Gasto médio: %{customdata[0]}/mês"
-           "<br>Média da UF: %{customdata[1]}/mês (%{customdata[2]})"
-           "<br>Partidos no período: %{customdata[3]}<br>Meses acima da média: %{customdata[4]}"},
-    "Desvio acumulado acima da média da UF (R$)"), use_container_width=True)
+           "<br>Mediana da UF: %{customdata[1]}/mês (%{customdata[2]})"
+           "<br>Partidos no período: %{customdata[3]}<br>Meses acima da mediana: %{customdata[4]}"},
+    "Desvio acumulado acima da mediana da UF (R$)"), use_container_width=True)
 
 # ------------------------------------------------------------ 2. partidos
 st.header("2. Partidos com maior desvio")
@@ -124,7 +129,7 @@ par = d["par"].query("qtd_deputados >= @MIN_DEPUTADOS_PARTIDO").sort_values(
 p1 = par.iloc[0]
 st.markdown(
     f"Por deputado-mês, **{p1.sigla_partido}** tem o maior desvio médio: "
-    f"**{brl(p1.desvio_medio_por_deputado_mes)}** acima da média da UF "
+    f"**{brl(p1.desvio_medio_por_deputado_mes)}** acima da mediana da UF "
     f"({int(p1.qtd_deputados)} deputados). O partido é o **da data do gasto** (histórico oficial da Câmara), "
     f"não o atual. Partidos com menos de {MIN_DEPUTADOS_PARTIDO} deputados ficam fora do gráfico.")
 par = par.assign(
@@ -134,7 +139,7 @@ fig = barras_h(par, "desvio_medio_por_deputado_mes", "sigla_partido", par["cor"]
     "cols": ["qtd_deputados", "deputado_meses", "gt", "da"],
     "tpl": "<b>%{y}</b><br>Desvio médio: R$ %{x:,.0f} por deputado-mês<br>Deputados: %{customdata[0]}"
            " · deputado-meses: %{customdata[1]}<br>Gasto total: %{customdata[2]}<br>Desvio acumulado: %{customdata[3]}"},
-    "Desvio médio por deputado-mês (R$) — laranja: acima da média · azul: abaixo")
+    "Desvio médio por deputado-mês (R$) — laranja: acima da mediana · azul: abaixo")
 st.plotly_chart(fig, use_container_width=True)
 
 erro = d["par"].assign(erro_abs=lambda x: x.erro_gasto_se_sobrescrito.abs())
@@ -167,7 +172,7 @@ cat = (conc.groupby(["descricao_subcota"], as_index=False)
 c1 = cat.iloc[0]
 st.markdown(
     f"A categoria que mais explica o desvio é **{c1.descricao_subcota.rstrip('.').capitalize()}**: "
-    f"**{brl(c1.excesso)}** acima do que gastou, em média, um deputado da mesma UF "
+    f"**{brl(c1.excesso)}** acima da mediana dos deputados da mesma UF nessa categoria "
     f"({c1.part:.0%} do gasto do parlamentar).")
 col1, col2 = st.columns([3, 2])
 with col1:
@@ -175,9 +180,9 @@ with col1:
                      g=lambda x: x.gasto.map(brl), p=lambda x: x.part.map(lambda v: f"{v:.0%}"))
     st.plotly_chart(barras_h(cat.head(10), "excesso", "descricao_subcota", cat.head(10)["cor"], {
         "cols": ["g", "p"],
-        "tpl": "<b>%{y}</b><br>Acima da média da UF: R$ %{x:,.0f}<br>Gasto na categoria: %{customdata[0]}"
+        "tpl": "<b>%{y}</b><br>Acima da mediana da UF: R$ %{x:,.0f}<br>Gasto na categoria: %{customdata[0]}"
                " (%{customdata[1]} do total)"},
-        "Gasto na categoria acima da média da UF (R$)"), use_container_width=True)
+        "Gasto na categoria acima da mediana da UF (R$)"), use_container_width=True)
 with col2:
     forn = (conc.groupby(["nome_fornecedor", "documento_fornecedor"], as_index=False, dropna=False)
             .agg(gasto=("gasto_fornecedor", "sum"), part=("participacao_no_deputado", "sum"),
@@ -193,7 +198,7 @@ with col2:
 
 with st.expander("Tabela completa do ranking"):
     st.dataframe(dep[["posicao_ranking", "nome_parlamentar", "sigla_uf", "trajetoria_partidaria",
-                      "meses_com_gasto", "gasto_medio_mensal", "media_uf_mensal", "desvio_acumulado",
+                      "meses_com_gasto", "gasto_medio_mensal", "mediana_uf_mensal", "desvio_acumulado",
                       "desvio_relativo", "hhi_fornecedores"]],
                  hide_index=True, use_container_width=True)
 
