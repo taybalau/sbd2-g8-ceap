@@ -261,8 +261,108 @@ A implementação em `dbt_ceap/` mediu os dados e desmentiu três premissas dest
   à ruptura de publicação da subcota 998 (SIGEPA), que deixa de ter débitos nos CSVs a partir de
   ago/2025. A ruptura está registrada em `seeds/ruptura_publicacao.csv`, e qualquer ruptura nova
   quebra o build. Janela atual: fev/2023 a jul/2025 (30 meses).
+- Desde 19/11/2026 a referência é a **mediana**, não a média (seção 9.5).
 
 ### 9.4 Itens do ADR não implementados
 - `dim_beneficiario_final_ubo` não entrou no esquema estrela da E3. O enriquecimento da E2
   continua disponível, mas não é necessário para responder à pergunta de gestão da E1.
 - `dim_calendario` não marca feriados. Nenhuma métrica da pergunta depende deles.
+
+### 9.5 Mediana no lugar da média como referência do desvio
+*Revisão de 2026-11-19, decidida pela Squad.*
+
+- **Decisão:** a referência do desvio passa a ser a **mediana** do gasto mensal dos deputados da
+  mesma UF no mesmo mês. O texto da pergunta de gestão continua como registrado na E1 ("acima da
+  média mensal"); "média mensal" passa a ser medida pela mediana.
+- **Motivo:** a média é sensível a valores extremos. Um deputado com um mês muito acima do teto
+  (lançamentos acumulados) ou muito abaixo (créditos e compensações deixam o líquido negativo)
+  desloca a referência de toda a UF, e o efeito é maior nas UFs com 8 deputados. A mediana é o
+  gasto do deputado do meio: metade gastou menos e metade gastou mais.
+- **O que mudou junto:**
+  - z-score robusto: (gasto − mediana) ÷ (1,4826 × MAD), em que MAD é o desvio absoluto mediano
+    (o desvio padrão sofre com os mesmos extremos da média);
+  - excesso por categoria em `mart_concentracao_parlamentar` medido contra a mediana dos
+    deputados da UF na subcota, contando com zero quem não gastou nela. Numa subcota que a maioria
+    da UF não usa, a mediana é R$ 0 e o excesso é o gasto inteiro do deputado nela;
+  - colunas renomeadas: `media_uf_mes` → `mediana_uf_mes`, `media_uf_mensal` →
+    `mediana_uf_mensal` e `meses_acima_media` → `meses_acima_mediana`. Os contratos foram
+    atualizados junto.
+- **O que o comparativo mostrou:** sobre os mesmos dados, com
+  `scripts/comparar_media_mediana.py` (download de 2026-11-19), a troca muda pouco o ranking de
+  parlamentares e mais o de partidos. A média ficou acima da mediana em só metade dos pares
+  UF × mês: o teto da cota limita os gastos altos, e muitas vezes são os gastos baixos que
+  deslocam a média. A mediana não depende do lado do extremo.
+
+Janela comparável: 02/2023 a 07/2025 (30 meses), 622 deputados.
+
+| Indicador | Média | Mediana |
+| :--- | ---: | ---: |
+| Referência mensal típica da UF (ponderada pelo nº de deputados) | R$ 40.033 | R$ 39.618 |
+| UF × mês em que a média fica acima da mediana | 395 de 810 | |
+| Deputados do top 15 que continuam no top 15 | 14 de 15 | |
+| Correlação de postos entre os dois rankings (Spearman) | 0,988 | |
+
+**Top 15 pela mediana** (posição na média ao lado; ▲ subiu com a mediana, ▼ caiu):
+
+| # mediana | Deputado | Desvio acumulado (mediana) | # média | Desvio acumulado (média) | Variação |
+| ---: | :--- | ---: | ---: | ---: | :---: |
+| 1 | Pompeo de Mattos (PDT-RS) | R$ 421.160 | 1 | R$ 420.108 | = |
+| 2 | Zé Trovão (PL-SC) | R$ 324.419 | 2 | R$ 338.885 | = |
+| 3 | Renilce Nicodemos (MDB-PA) | R$ 293.763 | 5 | R$ 285.244 | ▲ 2 |
+| 4 | André Ferreira (PL-PE) | R$ 286.167 | 15 | R$ 255.597 | ▲ 11 |
+| 5 | Kiko Celeguim (PT-SP) | R$ 281.041 | 7 | R$ 282.542 | ▲ 2 |
+| 6 | Juliana Cardoso (PT-SP) | R$ 278.598 | 8 | R$ 280.099 | ▲ 2 |
+| 7 | Olival Marques (MDB-PA) | R$ 276.432 | 10 | R$ 267.913 | ▲ 3 |
+| 8 | Cezinha de Madureira (PSD-SP) | R$ 275.832 | 9 | R$ 277.334 | ▲ 1 |
+| 9 | Daniel Freitas (PL-SC) | R$ 275.117 | 3 | R$ 289.583 | ▼ 6 |
+| 10 | Delegado Éder Mauro (PL-PA) | R$ 266.060 | 13 | R$ 257.542 | ▲ 3 |
+| 11 | Ricardo Salles (NOVO-SP) | R$ 264.584 | 11 | R$ 266.086 | = |
+| 12 | General Girão (PL-RN) | R$ 263.357 | 17 | R$ 239.513 | ▲ 5 |
+| 13 | Sidney Leite (PSD-AM) | R$ 258.815 | 4 | R$ 288.781 | ▼ 9 |
+| 14 | Jonas Donizette (PSB-SP) | R$ 254.679 | 14 | R$ 256.180 | = |
+| 15 | Adail Filho (REPUBLICANOS-AM) | R$ 253.984 | 6 | R$ 283.949 | ▼ 9 |
+
+Saíram do top 15: Daniela Reinehr (PL-SC), de 12º para 17º.
+
+**Partidos** com pelo menos 5 deputados, por desvio por deputado-mês:
+
+| Partido | Deputados | Desvio por deputado-mês (mediana) | # mediana | Desvio por deputado-mês (média) | # média |
+| :--- | ---: | ---: | ---: | ---: | ---: |
+| PRD | 6 | R$ 3.763 | 1 | R$ 3.459 | 1 |
+| PATRIOTA | 8 | R$ 2.883 | 2 | R$ 624 | 8 |
+| PT | 79 | R$ 2.415 | 3 | R$ 2.072 | 2 |
+| PSB | 16 | R$ 2.361 | 4 | R$ 1.707 | 4 |
+| PCdoB | 9 | R$ 2.181 | 5 | R$ 1.732 | 3 |
+| PSC | 9 | R$ 2.059 | 6 | R$ 350 | 10 |
+| SOLIDARIEDADE | 9 | R$ 1.605 | 7 | R$ 722 | 7 |
+| PSOL | 13 | R$ 1.265 | 8 | R$ 1.084 | 5 |
+| PV | 6 | R$ 1.085 | 9 | R$ 1.061 | 6 |
+| REPUBLICANOS | 61 | R$ 998 | 10 | R$ 453 | 9 |
+| PDT | 23 | R$ 813 | 11 | R$ 207 | 12 |
+| UNIÃO | 73 | R$ 773 | 12 | R$ 272 | 11 |
+| PP | 65 | R$ 513 | 13 | R$ 111 | 13 |
+| PL | 119 | R$ 221 | 14 | −R$ 221 | 15 |
+| MDB | 53 | R$ 62 | 15 | −R$ 165 | 14 |
+| PSDB | 16 | −R$ 93 | 16 | −R$ 223 | 16 |
+| PSD | 62 | −R$ 464 | 17 | −R$ 730 | 17 |
+| PODE | 23 | −R$ 908 | 18 | −R$ 1.371 | 18 |
+| AVANTE | 8 | −R$ 2.078 | 19 | −R$ 3.187 | 19 |
+| CIDADANIA | 5 | −R$ 12.343 | 20 | −R$ 12.160 | 20 |
+| NOVO | 5 | −R$ 19.531 | 21 | −R$ 19.344 | 21 |
+
+**UFs em que a média mais se afasta da mediana** (afastamento médio nos meses da janela; positivo: a média fica acima, puxada por gastos altos; negativo: fica abaixo, puxada por gastos baixos):
+
+| UF | Deputados/mês | Média mensal | Mediana mensal | Média vs mediana | Menor gasto num mês | Maior gasto num mês |
+| :--- | ---: | ---: | ---: | ---: | ---: | ---: |
+| AC | 8 | R$ 46.149 | R$ 43.528 | +6,0% | −R$ 130 | R$ 182.627 |
+| AP | 8 | R$ 48.261 | R$ 46.653 | +4,4% | −R$ 4.046 | R$ 130.486 |
+| RO | 8 | R$ 47.862 | R$ 46.456 | +3,4% | R$ 10.594 | R$ 114.333 |
+| SC | 17 | R$ 36.083 | R$ 36.565 | −0,7% | −R$ 1.667 | R$ 186.541 |
+| AM | 8 | R$ 40.930 | R$ 41.929 | −0,7% | −R$ 13.289 | R$ 160.124 |
+| AL | 9 | R$ 38.027 | R$ 39.993 | −4,6% | −R$ 52.292 | R$ 149.846 |
+
+- **Consequência:** com a mediana, a soma dos desvios de uma UF deixa de ser zero no mês. Por isso
+  a maioria dos partidos passa a ter desvio positivo, e a comparação útil é a ordem entre eles.
+- **Revisar se:** a Câmara mudar a regra do teto da cota, ou se a Squad quiser publicar as duas
+  referências lado a lado no painel.
+
