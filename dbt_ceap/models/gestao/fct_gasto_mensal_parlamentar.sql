@@ -2,11 +2,14 @@
 -- Escopo: só deputados (sem lideranças), só a 57ª Legislatura (jan/2023 é da 56ª),
 -- todas as competências (a coluna is_competencia_fechada marca o que já maturou).
 --
--- Métrica de referência: média do gasto mensal entre os deputados DA MESMA UF que tiveram
+-- Métrica de referência: MEDIANA do gasto mensal entre os deputados DA MESMA UF que tiveram
 -- gasto naquela competência. Compara-se com a UF porque o teto da CEAP varia por estado
--- (o deslocamento até Brasília pesa de forma diferente).
+-- (o deslocamento até Brasília pesa de forma diferente). Mediana, e não média, porque poucos
+-- gastos individuais muito altos puxavam a média da UF para cima (decisão no ADR-0005, seção 9.5).
+-- O z-score é o robusto: (gasto − mediana) ÷ (1,4826 × MAD), em que MAD é o desvio absoluto
+-- mediano; o fator 1,4826 deixa o MAD na mesma escala do desvio padrão numa distribuição normal.
 --
--- Cuidado com dupla agregação: a média é calculada sobre o total do DEPUTADO no mês
+-- Cuidado com dupla agregação: a mediana é calculada sobre o total do DEPUTADO no mês
 -- (soma das versões), nunca sobre as linhas de versão. Num mês de troca de partido o
 -- desvio do deputado é rateado entre as versões na proporção do gasto (desvio_alocado);
 -- assert_desvio_alocado_reconcilia garante que o rateio soma exatamente o desvio do mês.
@@ -38,10 +41,10 @@ referencia_uf as (
     select
         sigla_uf,
         competencia,
-        -- DECIMAL, não double: soma em ponto flutuante depende da ordem (threads) e fazia a
+        -- DECIMAL, não double: conta em ponto flutuante depende da ordem (threads) e fazia a
         -- Gold variar na 10ª casa entre execuções idênticas. Com DECIMAL, a Gold é bit a bit reprodutível.
-        round(avg(gasto_deputado_mes), 4)::decimal(18, 4) as media_uf_mes,
-        stddev_samp(gasto_deputado_mes)            as desvio_padrao_uf_mes,
+        round(median(gasto_deputado_mes), 4)::decimal(18, 4) as mediana_uf_mes,
+        mad(gasto_deputado_mes)::double            as mad_uf_mes,
         count(*)                                   as qtd_deputados_uf_mes
     from (select distinct id_deputado, sigla_uf, competencia, gasto_deputado_mes from deputado_mes)
     group by all
@@ -58,14 +61,14 @@ select
     d.qtd_lancamentos,
     d.gasto_versao,
     d.gasto_deputado_mes,
-    r.media_uf_mes,
+    r.mediana_uf_mes,
     r.qtd_deputados_uf_mes,
-    d.gasto_deputado_mes - r.media_uf_mes                                   as desvio_deputado_mes,
-    (d.gasto_deputado_mes - r.media_uf_mes) / nullif(r.desvio_padrao_uf_mes, 0) as z_deputado_mes,
+    d.gasto_deputado_mes - r.mediana_uf_mes                                 as desvio_deputado_mes,
+    round((d.gasto_deputado_mes - r.mediana_uf_mes) / nullif(1.4826 * r.mad_uf_mes, 0), 6) as z_deputado_mes,
     -- gasto líquido zero no mês (débitos anulados por créditos): rateio igual entre versões
     round(case when d.gasto_deputado_mes = 0
-         then (d.gasto_deputado_mes - r.media_uf_mes) / d.versoes_no_mes
-         else (d.gasto_deputado_mes - r.media_uf_mes) * d.gasto_versao / d.gasto_deputado_mes
+         then (d.gasto_deputado_mes - r.mediana_uf_mes) / d.versoes_no_mes
+         else (d.gasto_deputado_mes - r.mediana_uf_mes) * d.gasto_versao / d.gasto_deputado_mes
     end, 4)::decimal(18, 4)                                                  as desvio_alocado
 from deputado_mes d
 join referencia_uf r using (sigla_uf, competencia)
