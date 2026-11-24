@@ -4,7 +4,7 @@ Orquestração da E3 (Dagster + dagster-dbt).
 Grafo:
     bronze_ceap_lancamento [particionado por ano, retry 3x exponencial]
         └─> bronze_camara_deputado_historico [retry 3x; precisa dos ids da CEAP]
-              └─> modelos dbt (staging → silver → gold) com os testes do dbt como asset checks
+              └─> modelos dbt (staging → silver → gold → semantico) com os testes do dbt como asset checks
 
 Garantias que este arquivo implementa (e que orquestracao/demo_falhas.py exercita):
   * Retry: falha transitória de I/O é absorvida (RetryPolicy com backoff exponencial).
@@ -102,6 +102,8 @@ class Tradutor(DagsterDbtTranslator):
         caminho = dbt_resource_props.get("fqn", [])
         if "gestao" in caminho:
             return "gold"
+        if "semantic" in caminho:
+            return "semantico"
         if dbt_resource_props["resource_type"] == "seed":
             return "regras"
         return "silver"

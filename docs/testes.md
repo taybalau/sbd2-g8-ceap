@@ -3,26 +3,27 @@
 > Página gerada por `scripts/gerar_doc_testes.py` a partir do `manifest.json` e do
 > `run_results.json` do dbt. Não edite à mão: rode o script depois de um `dbt build`.
 
-**Última execução:** 19/11/2026 12:45 UTC, numa subida do zero (`docker compose up --build`) com os CSVs da Câmara baixados no mesmo dia.
+**Última execução:** 24/11/2026 13:30 UTC, numa subida do zero (`docker compose up --build`) com os CSVs da Câmara baixados no mesmo dia.
 
 | Resultado | Testes |
 | :--- | ---: |
 | ⚠️ aviso | 3 |
-| ✅ passou | 39 |
-| **Total** | **42** |
+| ✅ passou | 45 |
+| **Total** | **48** |
 
-## Cobertura do checklist da E3
+## Cobertura do checklist da E3 e da E4
 
 | Categoria | Testes | O que garante |
 | :--- | ---: | :--- |
 | [Esquema](#esquema) | 8 | colunas obrigatórias preenchidas; o contrato das tabelas de consumo (abaixo) fixa colunas e tipos |
 | [Volume](#volume) | 5 | nenhuma linha perdida ou duplicada entre Bronze, fato e Gold; nenhum ano ou mês faltando |
-| [Unicidade](#unicidade) | 14 | o grão declarado de cada modelo vale (uma linha por chave) |
+| [Unicidade](#unicidade) | 18 | o grão declarado de cada modelo vale (uma linha por chave) |
 | [Integridade referencial](#integridade-referencial) | 4 | toda chave do fato aponta para uma linha existente da dimensão |
 | [Distribuição](#distribuição) | 3 | o total e cada subcota não saltam fora da faixa calibrada com os dados reais (erro silencioso) |
 | [Domínio (dado sujo)](#domínio-dado-sujo) | 4 | valor negativo onde não cabe, subcota ou deputado que some, sobrescrita da fonte |
 | [SCD tipo 2](#scd-tipo-2) | 3 | o partido usado é o da data do gasto, sem buracos nem sobreposição de versões |
 | [Freshness e SLA](#freshness-e-sla) | 1 | a Gold não é publicada sobre uma Bronze mais velha que o SLA de 26 h |
+| [Consumo duplo (E4)](#consumo-duplo-e4) | 2 | a mesma métrica dá o mesmo número em todas as visões da camada semântica (o painel lê só dela; scripts/verificar_consumo_duplo.py confere a tela) |
 
 ### Contratos de esquema
 
@@ -38,6 +39,11 @@ de nome ou mudar de tipo em relação ao declarado. As colunas e os tipos estão
 | `gold.mart_desvio_parlamentar` | 16 |
 | `gold.mart_desvio_partido` | 9 |
 | `gold.mart_freshness_gold` | 9 |
+| `semantico.met_categoria_parlamentar` | 7 |
+| `semantico.met_contexto` | 14 |
+| `semantico.met_fornecedor_parlamentar` | 9 |
+| `semantico.met_parlamentar` | 17 |
+| `semantico.met_partido` | 10 |
 
 Contrato violado de propósito em `mart_desvio_parlamentar` (2026-11-17): primeiro declarando
 um tipo errado, depois tirando uma coluna do SQL. Nos dois casos a tabela não é criada:
@@ -89,6 +95,10 @@ This model has an enforced contract that failed.
 | `grao_unico` | `mart_desvio_parlamentar` | uma linha por (`id_deputado`) | erro | ✅ passou |
 | `grao_unico` | `mart_desvio_partido` | uma linha por (`sigla_partido`) | erro | ✅ passou |
 | `grao_unico` | `mart_freshness_gold` | uma linha por (`tabela_consumo`) | erro | ✅ passou |
+| `grao_unico` | `met_categoria_parlamentar` | uma linha por (`id_deputado`, `num_subcota`) | erro | ✅ passou |
+| `grao_unico` | `met_fornecedor_parlamentar` | uma linha por (`id_deputado`, `sk_fornecedor`) | erro | ✅ passou |
+| `grao_unico` | `met_parlamentar` | uma linha por (`id_deputado`) | erro | ✅ passou |
+| `grao_unico` | `met_partido` | uma linha por (`sigla_partido`) | erro | ✅ passou |
 | `unique` | `regra_subcota` | `num_subcota` não se repete | erro | ✅ passou |
 
 ## Integridade referencial
@@ -131,12 +141,19 @@ This model has an enforced contract that failed.
 | :--- | :--- | :--- | :--- | :--- |
 | `assert_gold_dentro_do_sla` (singular) | `mart_freshness_gold` | a Gold foi construída até 26 h depois da ingestão mais recente | erro | ✅ passou |
 
+## Consumo duplo (E4)
+
+| Teste | Tabela | O que verifica | Severidade | Última execução |
+| :--- | :--- | :--- | :--- | :--- |
+| `assert_semantico_gasto_consistente` (singular) | `fct_lancamento_ceap`, `met_categoria_parlamentar`, `met_fornecedor_parlamentar`, `met_parlamentar`, `met_partido` | o gasto total é o mesmo número por parlamentar, por partido, por categoria, por fornecedor e no fato | erro | ✅ passou |
+| `assert_semantico_desvio_consistente` (singular) | `met_contexto`, `met_parlamentar`, `met_partido` | o desvio por partido bate com o por parlamentar, e o erro da sobrescrita do contexto bate com o dos partidos | erro | ✅ passou |
+
 ## Freshness das fontes (`dbt source freshness`)
 
 | Fonte | Carregada em (UTC) | Idade | Limites | Resultado |
 | :--- | :--- | ---: | :--- | :--- |
-| `bronze.camara_deputado_historico` | 2026-11-19 12:40 | 0.0 h | aviso 7 dias · erro 30 dias | ✅ passou |
-| `bronze.ceap_lancamento` | 2026-11-19 12:40 | 0.0 h | aviso 26 h · erro 48 h | ✅ passou |
+| `bronze.camara_deputado_historico` | 2026-11-24 13:27 | 0.0 h | aviso 7 dias · erro 30 dias | ✅ passou |
+| `bronze.ceap_lancamento` | 2026-11-24 13:27 | 0.0 h | aviso 26 h · erro 48 h | ✅ passou |
 
 ## Outros testes da plataforma
 

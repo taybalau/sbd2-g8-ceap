@@ -21,6 +21,8 @@ vars:
   codigo_legislatura: 57
   # Anos que a ingestão deve trazer (mesmo valor de ANOS no docker-compose.yml).
   anos_esperados: [2023, 2024, 2025, 2026]
+  # Camada semântica (E4): partidos com menos deputados que isto ficam fora do ranking de partidos.
+  min_deputados_partido: 5
 
 models:
   ceap:
@@ -36,6 +38,10 @@ models:
     gestao:
       +schema: gold
       +materialized: table
+    # E4: camada semântica de métricas. Views, para o consumidor ler sempre o estado atual da Gold.
+    semantic:
+      +schema: semantico
+      +materialized: view
 
 tests:
   ceap:
