@@ -82,6 +82,7 @@ nav:
   - "Release Notes (E1 e E2)": release-notes.md
   - "Release Notes (E2)": RELEASE_NOTES_E2.md
   - "Release Notes (E3)": release_notes_e3.md
+  - E4 - Análise de LGPD: lgpd.md
 
 
 markdown_extensions:
