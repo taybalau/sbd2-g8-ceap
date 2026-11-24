@@ -112,9 +112,3 @@ Evidência obtida com logins reais por TCP, cada um associado a seu perfil:
 | `e4_tcp_consulta` | Mesma consulta | Negado: SQLSTATE `42501` |
 | `e4_tcp_consulta` | View de fornecedores | `***.456.789-**` e `PESSOA TESTE ***` |
 
-## Limites e integração
-
-- O controle cobre **PostgreSQL**. O isolamento do lakehouse e a máscara de `semantico.met_fornecedor_parlamentar.documento_fornecedor` ainda estão pendentes; o painel recebe o diretório completo.
-- CPF e passageiro permanecem na origem porque a ingestão ainda os utiliza. A ingestão E1 continua com `postgres` para migrations e manutenção; superusuários e donos dos objetos não são limitados por este recorte.
-- Para usuários permanentes, crie logins individuais, associe cada um a um perfil e defina senhas fora dos scripts. O roteiro acima demonstra autorização, sem testar autenticação por senha.
-- Documento para a issue #14: `docs/controle-de-acesso.md`, título **Controle de acesso com privilégio mínimo**. A demonstração pode ser usada na defesa da issue #13.
