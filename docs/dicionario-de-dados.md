@@ -5,13 +5,14 @@
 > descrição, edite o `.yml` e rode o script de novo.
 
 O banco transacional da E1 (PostgreSQL) está descrito em [Modelo de dados](modelo-de-dados.md).
-A camada analítica da E3 tem três camadas:
+A camada analítica tem quatro camadas (Bronze, Silver e Gold da E3; Semântica da E4):
 
 | Camada | Conteúdo | Tabelas |
 | :--- | :--- | ---: |
 | [Bronze](#bronze) | Cópia fiel dos dados públicos, em Delta Lake (`lakehouse/bronze/`), tudo como texto. | 2 |
 | [Silver](#silver) | Dados tipados, dimensões e o fato atômico (schema `silver` do `ceap.duckdb`). | 10 |
-| [Gold](#gold) | Tabelas de consumo do painel (schema `gold` do `ceap.duckdb`). | 5 |
+| [Gold](#gold) | Tabelas analíticas com grão declarado (schema `gold` do `ceap.duckdb`). | 5 |
+| [Semântica](#semântica) | Camada semântica de métricas da E4 (views do schema `semantico`): a única fonte do painel e do ETL reverso. | 5 |
 
 Legenda: 🔒 contrato de esquema (`contract: enforced`): o build reprova se a coluna sumir ou mudar de tipo · 👤 dado pessoal (LGPD).
 
@@ -373,3 +374,97 @@ Rupturas de publicação CONHECIDAS e investigadas. Os testes de salto e de subc
 | `dentro_do_sla` | `BOOLEAN` | Verdadeiro se idade_horas_no_build ≤ sla_horas. |
 | `ultima_competencia_publicada` | `DATE` | Competência mais recente nos CSVs. |
 | `ultima_competencia_fechada` | `DATE` | Competência mais recente com 4 meses de maturação. |
+
+## Semântica
+
+### `semantico.met_categoria_parlamentar` 🔒
+
+**Grão:** deputado × subcota. Métricas da categoria que gera o desvio (3ª parte da pergunta).
+
+| Coluna | Tipo | Descrição |
+| :--- | :--- | :--- |
+| `id_deputado` | `INTEGER` | nuDeputadoId do deputado. |
+| `num_subcota` | `INTEGER` | Código da subcota (categoria de despesa). |
+| `descricao_subcota` | `VARCHAR` | Descrição da subcota. |
+| `gasto_categoria` | `DECIMAL(38,2)` | Gasto do deputado na subcota, na janela comparável. |
+| `excesso_categoria_vs_uf` | `DECIMAL(38,2)` | Quanto o deputado gastou na subcota acima da mediana dos deputados da UF nela. |
+| `participacao_categoria_no_deputado` | `DOUBLE` | Peso da subcota no gasto total do deputado. |
+| `posicao_excesso` | `BIGINT` | Posição da subcota pelo excesso, dentro do deputado (1 = a que mais explica o desvio). |
+
+### `semantico.met_contexto` 🔒
+
+**Grão:** uma linha. Contexto das métricas: janela comparável, atualização, freshness e a ruptura que encerra a janela. View: a idade dos dados é calculada na hora da leitura.
+
+| Coluna | Tipo | Descrição |
+| :--- | :--- | :--- |
+| `janela_inicio` | `DATE` | Primeira competência comparável. |
+| `janela_fim` | `DATE` | Última competência comparável. |
+| `meses_janela` | `BIGINT` | Meses na janela comparável. |
+| `ultima_competencia_publicada` | `DATE` | Competência mais recente nos CSVs. |
+| `atualizado_em` | `TIMESTAMP WITH TIME ZONE` | Ingestão mais recente dos CSVs no fato. |
+| `sla_horas` | `INTEGER` | SLA declarado da Gold (26 h). |
+| `idade_horas` | `DOUBLE` | Horas desde a ingestão mais recente, medidas na leitura. |
+| `dentro_do_sla` | `BOOLEAN` | Verdadeiro se idade_horas ≤ sla_horas. |
+| `erro_total_sobrescrita` | `DECIMAL(38,2)` | Gasto que iria para o partido errado se o partido fosse sobrescrito pelo atual. |
+| `min_deputados_partido` | `INTEGER` | Mínimo de deputados para o partido entrar no ranking (var min_deputados_partido). |
+| `ruptura_num_subcota` | `INTEGER` | Subcota da ruptura que encerra a janela. |
+| `ruptura_inicio` | `DATE` | Primeira competência afetada pela ruptura. |
+| `ruptura_descricao` | `VARCHAR` | O que mudou na publicação. |
+| `ruptura_evidencia` | `VARCHAR` | Evidência medida da ruptura. |
+
+### `semantico.met_fornecedor_parlamentar` 🔒
+
+**Grão:** deputado × fornecedor (todas as subcotas somadas). Métricas de concentração em fornecedores (3ª parte da pergunta).
+
+| Coluna | Tipo | Descrição |
+| :--- | :--- | :--- |
+| `id_deputado` | `INTEGER` | nuDeputadoId do deputado. |
+| `sk_fornecedor` | `VARCHAR` | Fornecedor (dim_fornecedor). |
+| `nome_fornecedor` | `VARCHAR` | Nome do fornecedor. |
+| `documento_fornecedor` 👤 | `VARCHAR` | CNPJ ou CPF do fornecedor. *(pode ser CPF de pessoa física (fornecedor))* |
+| `gasto_fornecedor` | `DECIMAL(38,2)` | Gasto do deputado no fornecedor, na janela comparável. |
+| `participacao_no_deputado` | `DOUBLE` | Peso do fornecedor no gasto total do deputado. |
+| `qtd_lancamentos` | `BIGINT` | Lançamentos do deputado no fornecedor. |
+| `posicao_gasto` | `BIGINT` | Posição do fornecedor pelo gasto, dentro do deputado (1 = o maior). |
+| `participacao_acumulada` | `DOUBLE` | Quanto este fornecedor e os maiores que ele somam do gasto do deputado (na posição 10, os 10 maiores). |
+
+### `semantico.met_parlamentar` 🔒
+
+**Grão:** um deputado da 57ª Legislatura (sem lideranças), nas competências comparáveis. Métricas do ranking de desvio acima da mediana mensal da UF (1ª parte da pergunta de gestão).
+
+| Coluna | Tipo | Descrição |
+| :--- | :--- | :--- |
+| `id_deputado` | `INTEGER` | nuDeputadoId do deputado. |
+| `nome_parlamentar` | `VARCHAR` | Nome do deputado (versão mais recente). |
+| `sigla_uf` | `VARCHAR` | UF do deputado (versão mais recente). |
+| `partido_atual` | `VARCHAR` | Partido da versão mais recente. |
+| `rotulo` | `VARCHAR` | Rótulo de exibição: Nome (PARTIDO-UF). |
+| `trajetoria_partidaria` | `VARCHAR` | Partidos do deputado na 57ª, em ordem (ex.: PATRIOTA → PRD). |
+| `trocou_de_partido` | `BOOLEAN` | Verdadeiro se teve mais de uma versão na 57ª. |
+| `meses_com_gasto` | `BIGINT` | Competências comparáveis em que o deputado teve gasto. |
+| `gasto_total` | `DECIMAL(38,2)` | Gasto líquido do deputado na janela comparável. |
+| `gasto_medio_mensal` | `DOUBLE` | Gasto médio do deputado por mês com gasto. |
+| `mediana_uf_mensal` | `DOUBLE` | Referência da comparação. Média, nos meses do deputado, da mediana mensal da UF. |
+| `desvio_acumulado` | `DECIMAL(38,4)` | Quanto o deputado gastou acima da mediana da UF, somado mês a mês. É a medida do ranking. |
+| `desvio_relativo` | `DOUBLE` | Desvio acumulado em proporção da referência (0,33 = 33% acima da mediana da UF). |
+| `meses_acima_mediana` | `BIGINT` | Meses em que o gasto do deputado passou da mediana da UF. |
+| `z_medio` | `DOUBLE` | O quanto o deputado foge do padrão da UF, independentemente do tamanho da UF. |
+| `hhi_fornecedores` | `DOUBLE` | Concentração do gasto em fornecedores (0 a 1; perto de 1 = poucos fornecedores). |
+| `posicao_ranking` | `BIGINT` | Posição pelo desvio acumulado (1 = maior desvio). |
+
+### `semantico.met_partido` 🔒
+
+**Grão:** um partido, pela sigla vigente na data do gasto (SCD tipo 2). Métricas do ranking de partidos (2ª parte da pergunta) e do erro que a sobrescrita do partido causaria.
+
+| Coluna | Tipo | Descrição |
+| :--- | :--- | :--- |
+| `sigla_partido` | `VARCHAR` | Partido na data do gasto (SCD tipo 2). |
+| `qtd_deputados` | `BIGINT` | Deputados com gasto pelo partido na janela. |
+| `deputado_meses` | `BIGINT` | Pares deputado × mês com gasto pelo partido. |
+| `gasto_total` | `DECIMAL(38,2)` | Gasto pelo partido na janela comparável. |
+| `desvio_acumulado` | `DECIMAL(38,4)` | Desvio acima da mediana da UF atribuído ao partido. |
+| `desvio_medio_por_deputado_mes` | `DOUBLE` | Desvio médio por deputado-mês. É a medida do ranking de partidos. |
+| `entra_no_ranking` | `BOOLEAN` | Verdadeiro se o partido tem deputados suficientes para o ranking (var min_deputados_partido = 5). |
+| `posicao_ranking` | `BIGINT` | Posição pelo desvio por deputado-mês entre os partidos que entram no ranking (nulo para os demais). |
+| `gasto_total_se_sobrescrito` | `DECIMAL(38,2)` | Gasto que o partido teria se todo o histórico do deputado fosse do partido atual (SCD tipo 1). |
+| `erro_gasto_se_sobrescrito` | `DECIMAL(38,2)` | Erro que o SCD tipo 2 evita no partido. |
