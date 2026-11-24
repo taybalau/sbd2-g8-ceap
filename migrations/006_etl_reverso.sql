@@ -1,6 +1,6 @@
 -- E4 (issue #7): destino operacional do ETL reverso — a FILA DE AUDITORIA de parlamentares em alerta.
 --
--- Quem consome: o auditor (role `auditor`, quando existir). Ele abre a fila do dia
+-- Quem consome: o auditor (role `ceap_auditor`, quando existir). Ele abre a fila do dia
 -- (alerta.vw_fila_auditoria), escolhe quem investigar, abre as notas no portal da Câmara e registra
 -- o que decidiu em alerta.tratamento. Consultas de exemplo: etl_reverso/exemplo_auditor.sql.
 --
@@ -94,20 +94,23 @@ BEGIN
     END LOOP;
 END $$;
 
--- Privilégio mínimo, se as roles da migration 005 (controle de acesso, issue #10) existirem:
---   etl     só publica (lê e insere nos retratos e no registro de execução);
---   auditor lê a fila e registra decisões, sem poder mexer nos retratos.
+-- Privilégio mínimo, se as roles da migration 005 (controle de acesso, issue #10) existirem.
+-- Nomes combinados na issue #10 e na análise de LGPD (docs/lgpd.md, seção 6.2):
+--   ceap_pipeline  serviços (ingestão, dbt, Dagster e o ETL reverso): aqui só publica
+--                  (lê e insere nos retratos e no registro de execução);
+--   ceap_auditor   pessoa autorizada: lê a fila e registra decisões, sem mexer nos retratos;
+--   ceap_consulta  consulta SQL e BI: nenhum acesso ao schema alerta.
 DO $$
 BEGIN
-    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'etl') THEN
-        GRANT USAGE ON SCHEMA alerta TO etl;
-        GRANT SELECT, INSERT ON alerta.desvio_parlamentar, alerta.execucao TO etl;
-        GRANT USAGE ON SEQUENCE alerta.execucao_id_execucao_seq TO etl;
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ceap_pipeline') THEN
+        GRANT USAGE ON SCHEMA alerta TO ceap_pipeline;
+        GRANT SELECT, INSERT ON alerta.desvio_parlamentar, alerta.execucao TO ceap_pipeline;
+        GRANT USAGE ON SEQUENCE alerta.execucao_id_execucao_seq TO ceap_pipeline;
     END IF;
-    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'auditor') THEN
-        GRANT USAGE ON SCHEMA alerta TO auditor;
-        GRANT SELECT ON alerta.desvio_parlamentar, alerta.execucao, alerta.vw_fila_auditoria TO auditor;
-        GRANT SELECT, INSERT ON alerta.tratamento TO auditor;
-        GRANT USAGE ON SEQUENCE alerta.tratamento_id_tratamento_seq TO auditor;
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ceap_auditor') THEN
+        GRANT USAGE ON SCHEMA alerta TO ceap_auditor;
+        GRANT SELECT ON alerta.desvio_parlamentar, alerta.execucao, alerta.vw_fila_auditoria TO ceap_auditor;
+        GRANT SELECT, INSERT ON alerta.tratamento TO ceap_auditor;
+        GRANT USAGE ON SEQUENCE alerta.tratamento_id_tratamento_seq TO ceap_auditor;
     END IF;
 END $$;

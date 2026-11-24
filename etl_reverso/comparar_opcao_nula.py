@@ -112,7 +112,7 @@ def main():
             "historico_de_alertas": {"postgres": f"{retratos_pg} retrato(s) guardados, consultáveis por SQL",
                                      "csv": "só o arquivo do dia (a exportação sobrescreve), ou um arquivo por dia sem consulta"},
             "registro_protegido_contra_alteracao": {"postgres": alteracao_pg, "csv": alteracao_csv},
-            "acesso_por_perfil": {"postgres": "GRANT por role (auditor lê a fila e registra decisões; etl só publica)",
+            "acesso_por_perfil": {"postgres": "GRANT por role (ceap_auditor lê a fila e registra decisões; ceap_pipeline só publica)",
                                   "csv": "só permissão de arquivo: quem lê também pode editar e repassar"},
         },
     }

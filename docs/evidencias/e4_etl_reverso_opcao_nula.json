@@ -35,7 +35,7 @@
       "csv": "aceita (qualquer um com acesso ao arquivo reescreve os valores)"
     },
     "acesso_por_perfil": {
-      "postgres": "GRANT por role (auditor lê a fila e registra decisões; etl só publica)",
+      "postgres": "GRANT por role (ceap_auditor lê a fila e registra decisões; ceap_pipeline só publica)",
       "csv": "só permissão de arquivo: quem lê também pode editar e repassar"
     }
   }
