@@ -1,6 +1,6 @@
 -- Como o auditor usa a fila de auditoria (consumidor do ETL reverso, issue #7).
 -- Rode com:  docker compose exec -T db psql -U postgres -d ceap_oltp < etl_reverso/exemplo_auditor.sql
--- (quando a role `auditor` da migration 005 existir, conecte com ela: só lê a fila e registra decisões).
+-- (quando a role `ceap_auditor` da migration 005 existir, conecte com ela: só lê a fila e registra decisões).
 
 -- 1. A fila do dia: quem está em alerta e o que já foi decidido sobre cada um.
 SELECT posicao_ranking, nome_parlamentar, partido_atual, sigla_uf,
