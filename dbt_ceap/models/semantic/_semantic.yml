@@ -1,0 +1,224 @@
+version: 2
+
+# CAMADA SEMÂNTICA (E4). Definição versionada de cada métrica da pergunta de gestão, num lugar só.
+# Toda coluna com meta.metrica é uma métrica: nome (a coluna), descrição, fórmula e unidade aqui;
+# grão e dimensões no meta do modelo. O painel (painel/app.py) e o ETL reverso leem só o schema
+# `semantico` e não recalculam nada. docs/e4.md é gerado a partir deste arquivo.
+
+models:
+- name: met_parlamentar
+  description: >-
+    **Grão:** um deputado da 57ª Legislatura (sem lideranças), nas competências comparáveis. Métricas do
+    ranking de desvio acima da mediana mensal da UF (1ª parte da pergunta de gestão).
+  meta:
+    grao: deputado (id_deputado)
+    dimensoes: [deputado, UF, partido atual, trajetória partidária]
+    consumidores: [painel — bloco 1 e seletor do bloco 3, "ETL reverso (issue #7)"]
+  config:
+    contract: {enforced: true}
+  tests:
+  - grao_unico: {colunas: [id_deputado]}
+  columns:
+  - {name: id_deputado, data_type: integer, description: nuDeputadoId do deputado.}
+  - {name: nome_parlamentar, data_type: varchar, description: Nome do deputado (versão mais recente).}
+  - {name: sigla_uf, data_type: varchar, description: UF do deputado (versão mais recente).}
+  - {name: partido_atual, data_type: varchar, description: Partido da versão mais recente.}
+  - {name: rotulo, data_type: varchar, description: 'Rótulo de exibição: Nome (PARTIDO-UF).'}
+  - {name: trajetoria_partidaria, data_type: varchar, description: 'Partidos do deputado na 57ª, em ordem (ex.: PATRIOTA → PRD).'}
+  - {name: trocou_de_partido, data_type: boolean, description: Verdadeiro se teve mais de uma versão na 57ª.}
+  - name: meses_com_gasto
+    data_type: bigint
+    description: Competências comparáveis em que o deputado teve gasto.
+    meta: {metrica: true, unidade: meses, formula: "count(competências comparáveis com gasto do deputado)"}
+  - name: gasto_total
+    data_type: decimal(38,2)
+    description: Gasto líquido do deputado na janela comparável.
+    meta: {metrica: true, unidade: R$, formula: "sum(valor_liquido) nas competências comparáveis"}
+  - name: gasto_medio_mensal
+    data_type: double
+    description: Gasto médio do deputado por mês com gasto.
+    meta: {metrica: true, unidade: R$/mês, formula: "gasto_total ÷ meses_com_gasto"}
+  - name: mediana_uf_mensal
+    data_type: double
+    description: Referência da comparação. Média, nos meses do deputado, da mediana mensal da UF.
+    meta: {metrica: true, unidade: R$/mês, formula: "avg(mediana do gasto mensal dos deputados da mesma UF no mês)"}
+  - name: desvio_acumulado
+    data_type: decimal(38,4)
+    description: Quanto o deputado gastou acima da mediana da UF, somado mês a mês. É a medida do ranking.
+    meta: {metrica: true, unidade: R$, formula: "Σ meses (gasto do deputado no mês − mediana da UF no mês)"}
+  - name: desvio_relativo
+    data_type: double
+    description: Desvio acumulado em proporção da referência (0,33 = 33% acima da mediana da UF).
+    meta: {metrica: true, unidade: proporção, formula: "desvio_acumulado ÷ Σ meses (mediana da UF no mês)"}
+  - name: meses_acima_mediana
+    data_type: bigint
+    description: Meses em que o gasto do deputado passou da mediana da UF.
+    meta: {metrica: true, unidade: meses, formula: "count(meses com gasto > mediana da UF)"}
+  - name: z_medio
+    data_type: double
+    description: O quanto o deputado foge do padrão da UF, independentemente do tamanho da UF.
+    meta: {metrica: true, unidade: z robusto, formula: "avg((gasto − mediana da UF) ÷ (1,4826 × MAD da UF)) por mês"}
+  - name: hhi_fornecedores
+    data_type: double
+    description: Concentração do gasto em fornecedores (0 a 1; perto de 1 = poucos fornecedores).
+    meta: {metrica: true, unidade: índice 0–1, formula: "Σ fornecedores (participação do fornecedor no gasto do deputado)²"}
+  - name: posicao_ranking
+    data_type: bigint
+    description: Posição pelo desvio acumulado (1 = maior desvio).
+    meta: {metrica: true, unidade: posição, formula: "rank() por desvio_acumulado decrescente"}
+
+- name: met_partido
+  description: >-
+    **Grão:** um partido, pela sigla vigente na data do gasto (SCD tipo 2). Métricas do ranking de partidos
+    (2ª parte da pergunta) e do erro que a sobrescrita do partido causaria.
+  meta:
+    grao: partido na data do gasto (sigla_partido)
+    dimensoes: [partido na data do gasto]
+    consumidores: [painel — bloco 2]
+  config:
+    contract: {enforced: true}
+  tests:
+  - grao_unico: {colunas: [sigla_partido]}
+  columns:
+  - {name: sigla_partido, data_type: varchar, description: Partido na data do gasto (SCD tipo 2).}
+  - name: qtd_deputados
+    data_type: bigint
+    description: Deputados com gasto pelo partido na janela.
+    meta: {metrica: true, unidade: deputados, formula: "count(distinct deputado) com gasto pelo partido"}
+  - name: deputado_meses
+    data_type: bigint
+    description: Pares deputado × mês com gasto pelo partido.
+    meta: {metrica: true, unidade: deputado-mês, formula: "count(distinct (deputado, competência))"}
+  - name: gasto_total
+    data_type: decimal(38,2)
+    description: Gasto pelo partido na janela comparável.
+    meta: {metrica: true, unidade: R$, formula: "sum(gasto da versão do deputado) com o partido da data do gasto"}
+  - name: desvio_acumulado
+    data_type: decimal(38,4)
+    description: Desvio acima da mediana da UF atribuído ao partido.
+    meta: {metrica: true, unidade: R$, formula: "Σ desvio do mês rateado entre as versões pelo gasto (desvio_alocado)"}
+  - name: desvio_medio_por_deputado_mes
+    data_type: double
+    description: Desvio médio por deputado-mês. É a medida do ranking de partidos.
+    meta: {metrica: true, unidade: R$ por deputado-mês, formula: "desvio_acumulado ÷ deputado_meses"}
+  - name: entra_no_ranking
+    data_type: boolean
+    description: Verdadeiro se o partido tem deputados suficientes para o ranking (var min_deputados_partido = 5).
+    meta: {metrica: true, unidade: regra, formula: "qtd_deputados ≥ 5"}
+  - name: posicao_ranking
+    data_type: bigint
+    description: Posição pelo desvio por deputado-mês entre os partidos que entram no ranking (nulo para os demais).
+    meta: {metrica: true, unidade: posição, formula: "rank() por desvio_medio_por_deputado_mes decrescente, só entra_no_ranking"}
+  - name: gasto_total_se_sobrescrito
+    data_type: decimal(38,2)
+    description: Gasto que o partido teria se todo o histórico do deputado fosse do partido atual (SCD tipo 1).
+    meta: {metrica: true, unidade: R$, formula: "sum(gasto) agrupado pelo partido atual do deputado"}
+  - name: erro_gasto_se_sobrescrito
+    data_type: decimal(38,2)
+    description: Erro que o SCD tipo 2 evita no partido.
+    meta: {metrica: true, unidade: R$, formula: "gasto_total_se_sobrescrito − gasto_total"}
+
+- name: met_categoria_parlamentar
+  description: >-
+    **Grão:** deputado × subcota. Métricas da categoria que gera o desvio (3ª parte da pergunta).
+  meta:
+    grao: deputado × subcota (id_deputado, num_subcota)
+    dimensoes: [deputado, categoria de despesa (subcota)]
+    consumidores: [painel — bloco 3, gráfico de categorias]
+  config:
+    contract: {enforced: true}
+  tests:
+  - grao_unico: {colunas: [id_deputado, num_subcota]}
+  columns:
+  - {name: id_deputado, data_type: integer, description: nuDeputadoId do deputado.}
+  - {name: num_subcota, data_type: integer, description: Código da subcota (categoria de despesa).}
+  - {name: descricao_subcota, data_type: varchar, description: Descrição da subcota.}
+  - name: gasto_categoria
+    data_type: decimal(38,2)
+    description: Gasto do deputado na subcota, na janela comparável.
+    meta: {metrica: true, unidade: R$, formula: "sum(valor_liquido) do deputado na subcota"}
+  - name: excesso_categoria_vs_uf
+    data_type: decimal(38,2)
+    description: Quanto o deputado gastou na subcota acima da mediana dos deputados da UF nela.
+    meta: {metrica: true, unidade: R$, formula: "gasto_categoria − mediana(gasto na subcota dos deputados da UF, zero para quem não gastou)"}
+  - name: participacao_categoria_no_deputado
+    data_type: double
+    description: Peso da subcota no gasto total do deputado.
+    meta: {metrica: true, unidade: proporção, formula: "gasto_categoria ÷ gasto total do deputado"}
+  - name: posicao_excesso
+    data_type: bigint
+    description: Posição da subcota pelo excesso, dentro do deputado (1 = a que mais explica o desvio).
+    meta: {metrica: true, unidade: posição, formula: "rank() por excesso_categoria_vs_uf decrescente, por deputado"}
+
+- name: met_fornecedor_parlamentar
+  description: >-
+    **Grão:** deputado × fornecedor (todas as subcotas somadas). Métricas de concentração em fornecedores
+    (3ª parte da pergunta).
+  meta:
+    grao: deputado × fornecedor (id_deputado, sk_fornecedor)
+    dimensoes: [deputado, fornecedor]
+    consumidores: [painel — bloco 3, tabela de fornecedores]
+  config:
+    contract: {enforced: true}
+  tests:
+  - grao_unico: {colunas: [id_deputado, sk_fornecedor]}
+  columns:
+  - {name: id_deputado, data_type: integer, description: nuDeputadoId do deputado.}
+  - {name: sk_fornecedor, data_type: varchar, description: Fornecedor (dim_fornecedor).}
+  - {name: nome_fornecedor, data_type: varchar, description: Nome do fornecedor.}
+  - {name: documento_fornecedor, data_type: varchar, description: CNPJ ou CPF do fornecedor.}
+  - name: gasto_fornecedor
+    data_type: decimal(38,2)
+    description: Gasto do deputado no fornecedor, na janela comparável.
+    meta: {metrica: true, unidade: R$, formula: "sum(valor_liquido) do deputado no fornecedor"}
+  - name: participacao_no_deputado
+    data_type: double
+    description: Peso do fornecedor no gasto total do deputado.
+    meta: {metrica: true, unidade: proporção, formula: "gasto_fornecedor ÷ gasto total do deputado"}
+  - name: qtd_lancamentos
+    data_type: bigint
+    description: Lançamentos do deputado no fornecedor.
+    meta: {metrica: true, unidade: lançamentos, formula: "count(lançamentos)"}
+  - name: posicao_gasto
+    data_type: bigint
+    description: Posição do fornecedor pelo gasto, dentro do deputado (1 = o maior).
+    meta: {metrica: true, unidade: posição, formula: "row_number() por gasto_fornecedor decrescente, por deputado"}
+  - name: participacao_acumulada
+    data_type: double
+    description: Quanto este fornecedor e os maiores que ele somam do gasto do deputado (na posição 10, os 10 maiores).
+    meta: {metrica: true, unidade: proporção, formula: "Σ participacao_no_deputado das posições 1 até esta"}
+
+- name: met_contexto
+  description: >-
+    **Grão:** uma linha. Contexto das métricas: janela comparável, atualização, freshness e a ruptura que
+    encerra a janela. View: a idade dos dados é calculada na hora da leitura.
+  meta:
+    grao: uma linha
+    dimensoes: []
+    consumidores: [painel — cabeçalho, avisos e expander do erro da sobrescrita]
+  config:
+    contract: {enforced: true}
+  columns:
+  - {name: janela_inicio, data_type: date, description: Primeira competência comparável.}
+  - {name: janela_fim, data_type: date, description: Última competência comparável.}
+  - name: meses_janela
+    data_type: bigint
+    description: Meses na janela comparável.
+    meta: {metrica: true, unidade: meses, formula: "count(distinct competências comparáveis)"}
+  - {name: ultima_competencia_publicada, data_type: date, description: Competência mais recente nos CSVs.}
+  - {name: atualizado_em, data_type: timestamp with time zone, description: Ingestão mais recente dos CSVs no fato.}
+  - {name: sla_horas, data_type: integer, description: SLA declarado da Gold (26 h).}
+  - name: idade_horas
+    data_type: double
+    description: Horas desde a ingestão mais recente, medidas na leitura.
+    meta: {metrica: true, unidade: horas, formula: "agora − ingestão mais recente (mart_freshness_gold)"}
+  - {name: dentro_do_sla, data_type: boolean, description: Verdadeiro se idade_horas ≤ sla_horas.}
+  - name: erro_total_sobrescrita
+    data_type: decimal(38,2)
+    description: Gasto que iria para o partido errado se o partido fosse sobrescrito pelo atual.
+    meta: {metrica: true, unidade: R$, formula: "Σ partidos |erro_gasto_se_sobrescrito| ÷ 2 (cada real errado sobra num partido e falta noutro)"}
+  - {name: min_deputados_partido, data_type: integer, description: Mínimo de deputados para o partido entrar no ranking (var min_deputados_partido).}
+  - {name: ruptura_num_subcota, data_type: integer, description: Subcota da ruptura que encerra a janela.}
+  - {name: ruptura_inicio, data_type: date, description: Primeira competência afetada pela ruptura.}
+  - {name: ruptura_descricao, data_type: varchar, description: O que mudou na publicação.}
+  - {name: ruptura_evidencia, data_type: varchar, description: Evidência medida da ruptura.}
