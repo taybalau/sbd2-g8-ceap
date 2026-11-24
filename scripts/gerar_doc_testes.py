@@ -34,6 +34,8 @@ CATEGORIA_SINGULAR = {
     "assert_scd_preserva_partido_da_epoca": "SCD tipo 2",
     "assert_scd_caso_conhecido_204494": "SCD tipo 2",
     "assert_gold_dentro_do_sla": "Freshness e SLA",
+    "assert_semantico_gasto_consistente": "Consumo duplo (E4)",
+    "assert_semantico_desvio_consistente": "Consumo duplo (E4)",
 }
 # O que cada teste singular verifica, em uma frase (o detalhe fica no comentário do .sql).
 DESCRICAO_SINGULAR = {
@@ -53,11 +55,13 @@ DESCRICAO_SINGULAR = {
     "assert_scd_preserva_partido_da_epoca": "cada lançamento aponta para a versão vigente na data do gasto, e não para a atual",
     "assert_scd_caso_conhecido_204494": "regressão com caso real: o deputado 204494 é PATRIOTA até 07/02/2024 e PRD depois",
     "assert_gold_dentro_do_sla": "a Gold foi construída até 26 h depois da ingestão mais recente",
+    "assert_semantico_gasto_consistente": "o gasto total é o mesmo número por parlamentar, por partido, por categoria, por fornecedor e no fato",
+    "assert_semantico_desvio_consistente": "o desvio por partido bate com o por parlamentar, e o erro da sobrescrita do contexto bate com o dos partidos",
 }
 CATEGORIA_GENERICO = {"not_null": "Esquema", "unique": "Unicidade", "grao_unico": "Unicidade",
                       "relationships": "Integridade referencial"}
 ORDEM = ["Esquema", "Volume", "Unicidade", "Integridade referencial", "Distribuição",
-         "Domínio (dado sujo)", "SCD tipo 2", "Freshness e SLA"]
+         "Domínio (dado sujo)", "SCD tipo 2", "Freshness e SLA", "Consumo duplo (E4)"]
 STATUS = {"pass": "✅ passou", "fail": "❌ reprovou", "warn": "⚠️ aviso", "error": "❌ erro",
           "skipped": "⏭️ pulado", "runtime error": "❌ erro"}
 
@@ -157,7 +161,7 @@ def main():
     out += [f"| {s} | {n} |" for s, n in sorted(contagem.items())]
     out += [f"| **Total** | **{total}** |", ""]
 
-    out += ["## Cobertura do checklist da E3", "",
+    out += ["## Cobertura do checklist da E3 e da E4", "",
             "| Categoria | Testes | O que garante |", "| :--- | ---: | :--- |"]
     garante = {
         "Esquema": "colunas obrigatórias preenchidas; o contrato das tabelas de consumo (abaixo) fixa colunas e tipos",
@@ -168,6 +172,8 @@ def main():
         "Domínio (dado sujo)": "valor negativo onde não cabe, subcota ou deputado que some, sobrescrita da fonte",
         "SCD tipo 2": "o partido usado é o da data do gasto, sem buracos nem sobreposição de versões",
         "Freshness e SLA": "a Gold não é publicada sobre uma Bronze mais velha que o SLA de 26 h",
+        "Consumo duplo (E4)": "a mesma métrica dá o mesmo número em todas as visões da camada semântica "
+                              "(o painel lê só dela; scripts/verificar_consumo_duplo.py confere a tela)",
     }
     for c in ORDEM:
         if c in por_categoria:
