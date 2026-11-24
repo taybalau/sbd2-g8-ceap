@@ -1,0 +1,133 @@
+{
+  "execucao_com_destino_fora": {
+    "job": "etl_reverso",
+    "particao": null,
+    "sucesso": false,
+    "run_id": "630508a2-0778-426a-8ee4-b7c1db7bc7ce",
+    "dbt": {},
+    "tentativas_extras": 3,
+    "erros_das_tentativas": [
+      "\tIs the server running on that host and accepting TCP/IP connections?",
+      "\tIs the server running on that host and accepting TCP/IP connections?",
+      "\tIs the server running on that host and accepting TCP/IP connections?"
+    ],
+    "passos_com_falha": [
+      {
+        "passo": "alerta__desvio_parlamentar_postgres",
+        "erro": "Exceeded max_retries of 3"
+      }
+    ],
+    "passos_iniciados": [
+      "alerta__desvio_parlamentar_postgres"
+    ],
+    "passos_nao_executados": [
+      "alerta__desvio_parlamentar_postgres_alerta_igual_a_camada_semantica"
+    ],
+    "assets_materializados": [],
+    "checks_dbt_reprovados": [],
+    "checks_aprovados": []
+  },
+  "execucao_com_destino_de_volta": {
+    "job": "etl_reverso",
+    "particao": null,
+    "sucesso": true,
+    "run_id": "0a7e4f07-af44-4464-a920-e42321f3e61d",
+    "dbt": {},
+    "tentativas_extras": 0,
+    "erros_das_tentativas": [],
+    "passos_com_falha": [],
+    "passos_iniciados": [
+      "alerta__desvio_parlamentar_postgres",
+      "alerta__desvio_parlamentar_postgres_alerta_igual_a_camada_semantica"
+    ],
+    "passos_nao_executados": [],
+    "assets_materializados": [
+      "alerta/desvio_parlamentar_postgres"
+    ],
+    "checks_dbt_reprovados": [],
+    "checks_aprovados": [
+      "alerta_igual_a_camada_semantica"
+    ]
+  },
+  "antes": {
+    "gold_linhas": 622,
+    "gold_hash": "78db90a565f60c79eb37dcbb4c39f774",
+    "silver_fato_linhas": 801743,
+    "bronze_ceap_lancamento_versao": 12,
+    "bronze_camara_deputado_historico_versao": 3
+  },
+  "depois": {
+    "gold_linhas": 622,
+    "gold_hash": "78db90a565f60c79eb37dcbb4c39f774",
+    "silver_fato_linhas": 801743,
+    "bronze_ceap_lancamento_versao": 12,
+    "bronze_camara_deputado_historico_versao": 3
+  },
+  "destino_antes": {
+    "linhas_na_fila": 30,
+    "retratos": 2,
+    "execucoes_registradas": 4,
+    "ids_do_retrato_atual": [
+      1458,
+      3565,
+      3668,
+      3368,
+      3589,
+      3657,
+      3319,
+      3283,
+      3301,
+      2972,
+      3572,
+      3327,
+      3293,
+      2251,
+      3536
+    ]
+  },
+  "destino_depois_da_falha": {
+    "linhas_na_fila": 30,
+    "retratos": 2,
+    "execucoes_registradas": 4,
+    "ids_do_retrato_atual": [
+      1458,
+      3565,
+      3668,
+      3368,
+      3589,
+      3657,
+      3319,
+      3283,
+      3301,
+      2972,
+      3572,
+      3327,
+      3293,
+      2251,
+      3536
+    ]
+  },
+  "destino_depois_da_volta": {
+    "linhas_na_fila": 30,
+    "retratos": 2,
+    "execucoes_registradas": 5,
+    "ids_do_retrato_atual": [
+      1458,
+      3565,
+      3668,
+      3368,
+      3589,
+      3657,
+      3319,
+      3283,
+      3301,
+      2972,
+      3572,
+      3327,
+      3293,
+      2251,
+      3536
+    ]
+  },
+  "fila_igual_a_camada_semantica": true
+}
