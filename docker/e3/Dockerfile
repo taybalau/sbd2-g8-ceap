@@ -11,4 +11,6 @@ COPY dbt_ceap/ /app/dbt_ceap/
 COPY orquestracao/definitions.py orquestracao/demo_falhas.py orquestracao/backfill_dagster.py \
      orquestracao/dagster.yaml /app/orquestracao/
 COPY painel/ /app/painel/
+# E4: ETL reverso (camada semântica → fila de auditoria no PostgreSQL)
+COPY etl_reverso/ /app/etl_reverso/
 RUN mkdir -p $DAGSTER_HOME && cd dbt_ceap && DBT_PROFILES_DIR=. dbt parse --quiet
