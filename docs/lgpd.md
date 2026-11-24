@@ -1,9 +1,8 @@
-
 # E4 · Análise de LGPD
 
-Para cada dado pessoal que a plataforma trata, esta seção diz **qual é o dado** (coluna, tabela e camada Bronze/Silver/Gold), a **base legal** (LGPD, art. 7º e, quando preciso, art. 11), a **retenção** e o **descarte**. Foi escrita a partir do código do repositório e separa duas coisas:
+Para cada dado pessoal que a plataforma trata, esta seção diz **qual é o dado** (coluna, tabela e camada Bronze/Silver/Gold), a **base legal** (LGPD, art. 7º e, quando preciso, art. 11), a **retenção** e o **descarte**. 
 
-Documento técnico de governança, não é parecer jurídico. As bases legais e a premissa de "órgão de pesquisa" ([seção 2.1](#21-papéis)) devem ser validadas com a docência.
+Documento técnico de governança, não é parecer jurídico. As bases legais e a premissa de "órgão de pesquisa" ([seção 2.1](#21-papéis)) devem ser validadas com a docência e com o encarregado da UnB.
 
 ### Os dados do QSA são de demonstração
 
@@ -39,7 +38,7 @@ Uma linha por dado. O detalhe por camada e coluna está na [seção 3](#3-invent
 | **Partido do deputado** (sensível, art. 5º, II): `sgPartido`, `siglaPartido` · Bronze; `sigla_partido` · Silver; `partido_atual`, `trajetoria_partidaria` · Gold | **Art. 11, II, "c"**; legítimo interesse não se aplica | Igual ao nome | Igual ao nome |
 | **Identificadores do deputado e UF**: `ideCadastro`, `nuDeputadoId`, `sgUF` · Bronze; `id_deputado`, `sigla_uf` · Silver e Gold | Art. 7º, §3º e IV | Igual ao nome | Igual ao nome |
 | **CPF do deputado**: `cpf` · CSV e OLTP `parlamentar.cpf` (**não** está na Bronze, Silver nem Gold) | Público na origem, mas sem necessidade (art. 6º, III) | Alvo: zero | Migração 005 (`DROP COLUMN`), `cpf` fora do hash, CSV substituído por ano (T4) |
-| **CPF do fornecedor PF**: `txtCNPJCPF` · Bronze; `documento_fornecedor`, `sk_fornecedor` · Silver; `documento_fornecedor` · Gold | Art. 7º, §3º e IV; alternativa IX | Alvo: mascarado e pseudonimizado desde a Bronze | Mascarar na entrada da Bronze (`***.XXX.XXX-**`) e pseudônimo HMAC no lugar do md5; resíduo no CSV (T4) |
+| **CPF do fornecedor PF**: `txtCNPJCPF` · Bronze; `documento_fornecedor`, `sk_fornecedor` · Silver; `documento_fornecedor` · Gold; `stg_ceap_raw.txtCNPJCPF`, `fornecedor.cnpj_cpf` · OLTP; `cnpj_cpf` · Delta da E2 | Art. 7º, §3º e IV; alternativa IX | Alvo: mascarado e pseudonimizado em **todos** os caminhos. Staging: só durante a carga de cada ano | Mascarar nas **duas** entradas: Bronze (`bronze.py`) e OLTP (`ingest_ceap.py`), mais o Delta da E2. Staging: `TRUNCATE` ao fim de cada ano, com teste de que fica vazio ([3.2](#32-fornecedores-pessoa-física)); resíduo no CSV (T4) |
 | **Nome do fornecedor PF**: `txtFornecedor` · Bronze; `nome_fornecedor` · Silver e Gold | Igual ao CPF do fornecedor; mantido porque é o objeto do controle | Enquanto a plataforma existir | T6; sequências de 11 dígitos (MEI) mascaradas |
 | **Passageiro**: `txtPassageiro` · Bronze; `passageiro` · OLTP `despesa_ceap` e Delta da E2 | Art. 7º, §3º; sem necessidade (art. 6º, III) | Alvo: zero | Não ingerir na Bronze; `DROP COLUMN` no OLTP; evitar `UPDATE` (o WAL guarda a linha antiga) |
 | **Resultado do cruzamento CEAP × QSA** (total pago por pessoa) · consulta 3 de `consulta_caminho_societario.py` | Art. 7º, IV, §3º e §7º; é dado novo ([seção 5](#5-reidentificação-por-cruzamento-entre-ceap-e-qsa)) | Não é persistido; no consumo, só o grupo pseudonimizado | Saída padrão com pseudônimo; identificação só no papel `ceap_auditor` |
@@ -50,7 +49,7 @@ Uma linha por dado. O detalhe por camada e coluna está na [seção 3](#3-invent
 ### 2.1 Papéis
 
 - **Câmara dos Deputados e Receita Federal** são as controladoras dos dados na origem. A Câmara publica a CEAP e os dados de deputados por obrigação legal e transparência ativa (art. 7º, II e art. 23 da LGPD, como já registrado na planilha da E1; Lei de Acesso à Informação).
-- **Squad G8 / UnB (disciplina SBD2)** faz um **tratamento secundário**: reutiliza dado público para análise. A premissa é que a UnB é **órgão de pesquisa** (art. 5º, XVIII: entidade pública que inclui a pesquisa em sua missão institucional) e que o projeto é um **estudo**. É o que sustenta o art. 7º, IV. 
+- **Squad G8 / UnB (disciplina SBD2)** faz um **tratamento secundário**: reutiliza dado público para análise. A premissa é que a UnB é **órgão de pesquisa** (art. 5º, XVIII: entidade pública que inclui a pesquisa em sua missão institucional) e que o projeto é um **estudo**. É o que sustenta o art. 7º, IV. **Premissa a validar.**
 
 ### 2.2 Bases usadas
 
@@ -115,12 +114,16 @@ Na CEAP, o fornecedor pode ser CPF no lugar de CNPJ (`dim_fornecedor.tipo_docume
 
 | Dado | Onde está (camada · tabela · coluna) | Base legal | Retenção | Descarte |
 | :--- | :--- | :--- | :--- | :--- |
-| **CPF do fornecedor** | Bronze · `ceap_lancamento.txtCNPJCPF`<br>Silver · `stg_ceap__lancamento.documento_fornecedor`, `dim_fornecedor.documento_fornecedor`, `.chave_fornecedor`, `.sk_fornecedor` (md5 do documento)<br>Gold · `mart_concentracao_parlamentar.documento_fornecedor`, `.sk_fornecedor`<br>Painel · coluna "CNPJ/CPF" dos 10 maiores fornecedores<br>OLTP · `fornecedor.cnpj_cpf`; Delta E2 · `despesa_ceap.cnpj_cpf` | Art. 7º, §3º (a Câmara publica o documento ao prestar contas do gasto público; reutilizar para controle social é fim compatível) e IV. Alternativa: IX. **Necessidade:** identificar o recebedor, sim; guardar o número completo, não. CPF mascarado e pseudônimo bastam (art. 6º, III) | **Hoje:** CPF completo em todas as camadas, sem prazo. **Alvo:** Silver e Gold só com CPF mascarado e pseudônimo. A Bronze já recebe o valor mascarado | **Alvo:** mascarar **na entrada da Bronze** (`txtCNPJCPF` com 11 dígitos vira `***.XXX.XXX-**`, mesmo padrão da Receita) e gravar o pseudônimo em `_doc_pf_pseudo`. Mesma exceção deliberada que já vale para `cpf`. Residual no CSV: T4 |
+| **CPF do fornecedor** | Bronze · `ceap_lancamento.txtCNPJCPF`<br>Silver · `stg_ceap__lancamento.documento_fornecedor`, `dim_fornecedor.documento_fornecedor`, `.chave_fornecedor`, `.sk_fornecedor` (md5 do documento)<br>Gold · `mart_concentracao_parlamentar.documento_fornecedor`, `.sk_fornecedor`<br>Painel · coluna "CNPJ/CPF" dos 10 maiores fornecedores<br>OLTP · `fornecedor.cnpj_cpf` e a **staging** `stg_ceap_raw.txtCNPJCPF` (CSV bruto, `UNLOGGED`); Delta E2 · `despesa_ceap.cnpj_cpf` | Art. 7º, §3º (a Câmara publica o documento ao prestar contas do gasto público; reutilizar para controle social é fim compatível) e IV. Alternativa: IX. **Necessidade:** identificar o recebedor, sim; guardar o número completo, não. CPF mascarado e pseudônimo bastam (art. 6º, III) | **Hoje:** CPF completo em todas as camadas, sem prazo; na staging, só entre o `COPY` e o `TRUNCATE` de cada ano. **Alvo:** Silver e Gold só com CPF mascarado e pseudônimo. A Bronze já recebe o valor mascarado | **Alvo:** mascarar **na entrada da Bronze** (`txtCNPJCPF` com 11 dígitos vira `***.XXX.XXX-**`, mesmo padrão da Receita) e gravar o pseudônimo em `_doc_pf_pseudo`. Mesma exceção deliberada que já vale para `cpf`. **Isso não alcança o OLTP nem o Delta da E2**: `ingest_ceap.py` copia o CSV direto para a staging (`COPY`) e dali para `fornecedor`, e `batch_ingest_lakehouse.py` e o CDC leem `cnpj_cpf` do OLTP. A máscara precisa ser repetida nesses caminhos (L15). Residual no CSV: T4 |
 | **Nome do fornecedor PF** | Bronze · `txtFornecedor`<br>Silver · `nome_fornecedor_publicado`, `dim_fornecedor.nome_fornecedor`<br>Gold · `mart_concentracao_parlamentar.nome_fornecedor`<br>OLTP · `fornecedor.razao_social` | Igual ao CPF. É **mantido**: quem recebe dinheiro público é o objeto do controle. **Ressalva:** em MEI e empresário individual, o nome empresarial costuma ser o nome da pessoa seguido do CPF. Sequências de 11 dígitos no nome são mascaradas na Silver | Enquanto a plataforma existir | T6. Verificação contínua pelo teste `assert_gold_sem_cpf_completo` (apêndice A.5) |
 | **Pseudônimo do fornecedor PF** (alvo) | Bronze · `_doc_pf_pseudo`<br>Silver e Gold · `sk_fornecedor` para PF, calculado com HMAC e não mais com md5 | Art. 7º, IV (anonimização "sempre que possível") | Enquanto a chave secreta existir | No encerramento, a chave é destruída (T6) e o pseudônimo deixa de poder ser refeito |
 
-#### "Quantos fornecedores são pessoa física?"
-    Não há número medido no repositório (os CSVs não são versionados), então este documento não afirma nenhum. Para medir, na Silver:
+### Staging do OLTP (`stg_ceap_raw`)
+
+A tabela guarda o CSV **bruto** de um ano (`txtCNPJCPF` com o CPF completo do fornecedor, além de `cpf` do deputado e `txtPassageiro`). No `ingest_ceap.py` ela recebe `TRUNCATE` no início e no fim de cada ano, e o `COMMIT` vem depois do segundo, então **depois de uma carga concluída ela fica vazia**. A exposição é transitória, mas existe durante a carga, e a máscara aplicada na Bronze não a alcança. Controles: (a) mascarar na própria carga, aplicando o mesmo tratamento do OLTP antes de gravar em `fornecedor` e `despesa_ceap`; (b) teste que reprova se `select count(*) from stg_ceap_raw` for maior que zero depois da ingestão; (c) nenhum papel, além de `ceap_pipeline`, tem acesso à tabela (o `REVOKE` do apêndice A.1 já cobre). Um `COPY` interrompido desfaz a transação, mas só um `VACUUM` remove fisicamente as linhas mortas.
+
+### Quantos fornecedores são pessoa física?
+Não há número medido no repositório (os CSVs não são versionados), então este documento não afirma nenhum. Para medir, na Silver:
 
     ```sql
     select tipo_documento_fornecedor, count(*) as fornecedores
@@ -153,7 +156,7 @@ Aqui estão **pessoas comuns**, não políticos. Elas não aparecem na CEAP; apa
 
 #### 3.3.2 Dá para mascarar o CPF ou guardar só um hash?
 
-A Receita **já publica o CPF mascarado** (`***.382.911-**`): esconde os 3 primeiros e os 2 últimos dígitos). Nós nunca temos o CPF completo do sócio. A pergunta é o que fazer com o valor mascarado e o nome.
+A Receita **já publica o CPF mascarado** (`***.382.911-**`: esconde os 3 primeiros e os 2 últimos dígitos). Nós nunca temos o CPF completo do sócio. A pergunta é o que fazer com o valor mascarado e o nome.
 
 Um detalhe que pesa na avaliação: os 2 dígitos verificadores do CPF são calculados a partir dos 9 primeiros. Com 6 dos 9 visíveis, restam **no máximo 1.000 CPFs válidos** compatíveis com a máscara. Ela impede o uso direto como CPF, mas não impede que alguém com outra lista de CPFs completos reconstrua o número. Por outro lado, a máscara tem só 10⁶ valores para centenas de milhões de CPFs, então o par (nome, máscara) é muito seletivo, mas **não é um identificador único**.
 
@@ -219,7 +222,7 @@ Por que `VACUUM` e por que o prazo de 7 dias:
 
 A CEAP, sozinha, identifica **empresas** e pagamentos. O QSA, sozinho, identifica **quem são os sócios** de cada empresa. Nenhuma das duas diz "esta pessoa recebeu R$ X de dinheiro público, por estas empresas, vindo destes deputados". O cruzamento (consulta 3 de `consulta_caminho_societario.py` e a consulta 3 de [Enriquecimento societário](enriquecimento.md)) produz exatamente isso.
 
-#### "O cruzamento cria dado pessoal novo"
+### O cruzamento cria dado pessoal novo
 
 O cruzamento CEAP × QSA pode identificar pessoas, e atribuir a elas valores, que nenhuma das duas bases identificava sozinha. O resultado (nome, CPF mascarado, total pago pela Câmara aos CNPJs que a pessoa controla) é informação relacionada a pessoa natural identificada (art. 5º, I) e se aproxima de perfil (art. 12, §2º). Ele deve ser tratado com mais cuidado que cada fonte isolada, mesmo que as duas fontes sejam públicas. A publicidade da origem não se transfere automaticamente ao resultado (art. 7º, §3º e §7º).
 
@@ -248,7 +251,7 @@ Esta seção funciona como um relatório de impacto simplificado (art. 38). Ela 
 
 ## 6. Controle de acesso e recorte de colunas
 
-### 6.1 Situação atual
+### 6.1 Situação hoje
 
 - O `docker-compose.yml` sobe o PostgreSQL com o superusuário `postgres`, e a ingestão se conecta com ele. Não há papéis nem `GRANT`.
 - O `e3-painel` monta o `./lakehouse` inteiro: Bronze (com `txtPassageiro`) e as tabelas do QSA ficam acessíveis ao processo do painel. O `read_only=True` da conexão DuckDB evita travar o dbt, mas **não é segurança**: é só uma opção de conexão.
@@ -323,6 +326,7 @@ Cada linha vem de uma leitura do código. A prioridade considera o dano ao titul
 | L7 | `passageiro` em 4 lugares (Bronze, OLTP, Delta da E2, WAL), e a E3 diz "só na Bronze" | `bronze.py`; `001_create_tables.sql`; `batch_ingest_lakehouse.py`; `cdc_stream_consumer.py` | Não ingerir na Bronze; `DROP COLUMN`; tirar `passageiro` de `COLUNAS_DESPESA_CEAP` e dos `SELECT` do CDC; corrigir `e3.md`, `E3_MODEL.md` e `e3-erros-tratados.md` | Média |
 | L8 | `consulta_caminho_societario.py` imprime nome e CPF mascarado no log do container | `scripts/consulta_caminho_societario.py` | Controle R5 | Média |
 | L9 | Descarte só lógico: Delta guarda arquivos antigos até o `VACUUM` | `bronze.py`; `enrich_receita_socios.py` | Tarefa T2 | Média |
+| L15 | CPF de fornecedor PF entra completo pela staging do OLTP, por `fornecedor.cnpj_cpf` e pelo Delta da E2; a máscara na Bronze não os alcança | `001_create_tables.sql` (`stg_ceap_raw`, `fornecedor`); `ingest_ceap.py` (`COPY`, `SQL_POPULATE_FORNECEDOR`); `batch_ingest_lakehouse.py` e `cdc_stream_consumer.py` (`cnpj_cpf`) | Aplicar a mesma máscara ou pseudônimo nas duas junções do `ingest_ceap.py` (a chave única `(cnpj_cpf, razao_social)` e o `JOIN` com a despesa usam a mesma expressão) e nos `SELECT` do Delta; teste de staging vazia | Alta |
 | L10 | Nome do fornecedor pode trazer CPF (MEI e empresário individual) | `dim_fornecedor.nome_fornecedor` | Medir (consulta em 3.2) e mascarar sequências de 11 dígitos | Média |
 | L11 | Planilha da E1 diz que a fonte CNPJ/Receita não contém dado pessoal | Aba "1 Fontes", linha 3 | Seção 9 | Média |
 | L12 | `_hash_lancamento` inclui o `cpf` e o CPF é recuperável por força bruta | `ingestao/bronze.py` (`hash_expr`) | Tirar `cpf` do insumo (o `nuDeputadoId` já distingue o deputado), reprocessar os anos pelo backfill e conferir o teste `unique` | Baixa |
