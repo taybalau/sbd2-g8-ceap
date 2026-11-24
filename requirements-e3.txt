@@ -11,3 +11,5 @@ dagster-dbt==0.27.16
 streamlit==1.48.*
 plotly==6.*
 pandas>=2.2
+# E4: ETL reverso grava a fila de auditoria no PostgreSQL da E1
+psycopg[binary]==3.2.*

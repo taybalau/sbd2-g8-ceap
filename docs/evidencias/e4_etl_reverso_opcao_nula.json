@@ -1,0 +1,42 @@
+{
+  "medido_em": "2026-11-24T15:04:47+00:00",
+  "repeticoes": 20,
+  "linhas_publicadas": 15,
+  "custo": {
+    "publicar_postgres": {
+      "mediana_ms": 38.0,
+      "p90_ms": 42.1
+    },
+    "publicar_csv": {
+      "mediana_ms": 25.9,
+      "p90_ms": 37.2
+    },
+    "ler_fila_postgres": {
+      "mediana_ms": 13.1,
+      "p90_ms": 14.4
+    },
+    "ler_csv": {
+      "mediana_ms": 0.9,
+      "p90_ms": 1.0
+    },
+    "csv_bytes": 1568
+  },
+  "necessidades_do_auditor": {
+    "decisao_sobrevive_a_proxima_publicacao": {
+      "postgres": "em_analise",
+      "csv": "perdida"
+    },
+    "historico_de_alertas": {
+      "postgres": "2 retrato(s) guardados, consultáveis por SQL",
+      "csv": "só o arquivo do dia (a exportação sobrescreve), ou um arquivo por dia sem consulta"
+    },
+    "registro_protegido_contra_alteracao": {
+      "postgres": "bloqueada: alerta.desvio_parlamentar é insert-only (ADR-0001): registre um evento novo em vez de UPDATE",
+      "csv": "aceita (qualquer um com acesso ao arquivo reescreve os valores)"
+    },
+    "acesso_por_perfil": {
+      "postgres": "GRANT por role (ceap_auditor lê a fila e registra decisões; ceap_pipeline só publica)",
+      "csv": "só permissão de arquivo: quem lê também pode editar e repassar"
+    }
+  }
+}

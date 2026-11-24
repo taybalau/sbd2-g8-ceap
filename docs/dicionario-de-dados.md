@@ -451,6 +451,7 @@ Rupturas de publicação CONHECIDAS e investigadas. Os testes de salto e de subc
 | `z_medio` | `DOUBLE` | O quanto o deputado foge do padrão da UF, independentemente do tamanho da UF. |
 | `hhi_fornecedores` | `DOUBLE` | Concentração do gasto em fornecedores (0 a 1; perto de 1 = poucos fornecedores). |
 | `posicao_ranking` | `BIGINT` | Posição pelo desvio acumulado (1 = maior desvio). |
+| `em_alerta` | `BOOLEAN` | Verdadeiro para o topo do ranking (var alerta_top_n = 15). É o top 15 do painel e o que o ETL reverso publica na fila de auditoria. |
 
 ### `semantico.met_partido` 🔒
 

@@ -18,5 +18,6 @@ select
     meses_acima_mediana,
     z_medio,
     hhi_fornecedores,
-    posicao_ranking
+    posicao_ranking,
+    posicao_ranking <= {{ var('alerta_top_n') }} as em_alerta
 from {{ ref('mart_desvio_parlamentar') }}

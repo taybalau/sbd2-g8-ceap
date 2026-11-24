@@ -48,6 +48,15 @@ services:
     build: {context: ., dockerfile: docker/e3/Dockerfile}
     container_name: ceap_e3_pipeline
     command: python orquestracao/demo_falhas.py base
+    environment: &conexao_oltp
+      # E4: o ETL reverso publica a fila de auditoria no PostgreSQL da E1 com um usuário de serviço
+      # de privilégio mínimo (membro só de ceap_pipeline; migrations/006_etl_reverso.sql), e não
+      # com o superusuário. A ingestão da E1 continua com postgres porque aplica as migrations.
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: ceap_oltp
+      DB_USER: ceap_etl_reverso
+      DB_PASSWORD: ceap_etl_reverso
     volumes:
       - ./base-dados:/app/base-dados
       - ./lakehouse:/app/lakehouse
@@ -55,18 +64,21 @@ services:
     depends_on:
       # quem baixa os CSVs da Câmara para base-dados/ é o serviço de ingestão da E1/E2
       ingestion: {condition: service_completed_successfully}
+    networks: [ceap_network]
 
   e3-dagster:
     build: {context: ., dockerfile: docker/e3/Dockerfile}
     container_name: ceap_e3_dagster
     command: sh -c "cp orquestracao/dagster.yaml $$DAGSTER_HOME/dagster.yaml && dagster dev -f orquestracao/definitions.py -h 0.0.0.0 -p 3000"
     ports: ["3000:3000"]
+    environment: *conexao_oltp
     volumes:
       - ./base-dados:/app/base-dados
       - ./lakehouse:/app/lakehouse
       - ./orquestracao/.dagster_home:/app/orquestracao/.dagster_home
     depends_on:
       e3-pipeline: {condition: service_completed_successfully}
+    networks: [ceap_network]
 
   e3-painel:
     build: {context: ., dockerfile: docker/e3/Dockerfile}
