@@ -5,6 +5,7 @@ Grafo:
     bronze_ceap_lancamento [particionado por ano, retry 3x exponencial]
         └─> bronze_camara_deputado_historico [retry 3x; precisa dos ids da CEAP]
               └─> modelos dbt (staging → silver → gold → semantico) com os testes do dbt como asset checks
+                    └─> alerta/desvio_parlamentar_postgres [ETL reverso da E4; retry 3x exponencial]
 
 Garantias que este arquivo implementa (e que orquestracao/demo_falhas.py exercita):
   * Retry: falha transitória de I/O é absorvida (RetryPolicy com backoff exponencial).
@@ -13,6 +14,10 @@ Garantias que este arquivo implementa (e que orquestracao/demo_falhas.py exercit
     pula os modelos que dependem do modelo reprovado.
   * Backfill: a Bronze é particionada por ano; reprocessar 2024 substitui só a partição
     2024 (replaceWhere no Delta), sem tocar nos outros anos.
+  * ETL reverso (E4): depois do dbt, os parlamentares em alerta da camada semântica são
+    empurrados para a fila de auditoria do PostgreSQL. Destino fora do ar: 3 tentativas com
+    espera crescente; se ainda falhar, o run fica vermelho, a Gold e o painel não mudam e a
+    próxima execução publica (a carga é idempotente).
 """
 
 import os
@@ -20,6 +25,7 @@ import sys
 from pathlib import Path
 
 from dagster import (
+    AssetCheckResult,
     AssetExecutionContext,
     AssetSelection,
     DagsterRunStatus,
@@ -34,18 +40,21 @@ from dagster import (
     RetryPolicy,
     StaticPartitionsDefinition,
     asset,
+    asset_check,
     define_asset_job,
     run_status_sensor,
     schedule,
 )
-from dagster_dbt import DagsterDbtTranslator, DbtCliResource, DbtProject, dbt_assets
+from dagster_dbt import DagsterDbtTranslator, DbtCliResource, DbtProject, dbt_assets, get_asset_key_for_model
 
 RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ / "ingestao"))
+sys.path.insert(0, str(RAIZ / "etl_reverso"))
 os.environ.setdefault("LAKEHOUSE_PATH", str(RAIZ / "lakehouse"))
 
 import bronze  # noqa: E402
 import bronze_historico  # noqa: E402
+import publicar_alertas  # noqa: E402
 
 ANOS = StaticPartitionsDefinition(os.getenv("ANOS", "2023,2024,2025,2026").split(","))
 
@@ -115,7 +124,40 @@ def modelos_dbt(context: AssetExecutionContext, dbt: DbtCliResource):
     yield from dbt.cli(["build"], context=context).stream()
 
 
-# Dois jobs porque a Bronze da CEAP é particionada por ano e o restante não é.
+# ---------------------------------------------------------------- ETL reverso (E4)
+RETRY_DESTINO = RetryPolicy(max_retries=3, delay=2, backoff=Backoff.EXPONENTIAL)
+ALERTA = AssetKey(["alerta", "desvio_parlamentar_postgres"])
+
+
+@asset(
+    key=ALERTA,
+    deps=[get_asset_key_for_model([modelos_dbt], "met_parlamentar"),
+          get_asset_key_for_model([modelos_dbt], "met_contexto")],
+    retry_policy=RETRY_DESTINO,
+    group_name="etl_reverso",
+    description="Push dos parlamentares em alerta (semantico.met_parlamentar.em_alerta) para a fila de "
+                "auditoria alerta.desvio_parlamentar no PostgreSQL. Idempotente; uma transação só.",
+)
+def alerta_desvio_postgres(context: AssetExecutionContext) -> MaterializeResult:
+    context.log.info(f"Tentativa {context.retry_number + 1} de publicar no PostgreSQL")
+    r = publicar_alertas.publicar(origem=f"dagster run {context.run_id[:8]}")
+    return MaterializeResult(metadata={
+        "referencia_dados": r["referencia_dados"], "linhas_recebidas": r["linhas_recebidas"],
+        "linhas_novas": r["linhas_novas"], "tentativa": context.retry_number + 1})
+
+
+@asset_check(asset=ALERTA, description="O retrato publicado no PostgreSQL tem os mesmos parlamentares "
+                                        "em alerta da camada semântica (mesmo número nas duas telas).")
+def alerta_igual_a_camada_semantica() -> AssetCheckResult:
+    esperados = [a[1] for a in publicar_alertas.ler_alertas()]
+    publicados = publicar_alertas.ids_publicados()
+    return AssetCheckResult(passed=esperados == publicados, metadata={
+        "em_alerta_na_camada": len(esperados), "no_postgres": len(publicados),
+        "so_na_camada": str(sorted(set(esperados) - set(publicados))),
+        "so_no_postgres": str(sorted(set(publicados) - set(esperados)))})
+
+
+# Dois jobs principais porque a Bronze da CEAP é particionada por ano e o restante não é.
 ingestao_ceap = define_asset_job(
     "ingestao_ceap", selection=AssetSelection.keys(AssetKey(["bronze", "ceap_lancamento"])),
     partitions_def=ANOS,
@@ -124,6 +166,8 @@ transformacao = define_asset_job(
     "transformacao",
     selection=AssetSelection.all() - AssetSelection.keys(AssetKey(["bronze", "ceap_lancamento"])),
 )
+# Só o ETL reverso: republicar à mão depois de o destino voltar, sem refazer o dbt.
+etl_reverso = define_asset_job("etl_reverso", selection=AssetSelection.keys(ALERTA))
 
 
 # Ligados por padrão: sem isso o `dagster dev` sobe com agenda e sensor desligados e o grafo
@@ -145,8 +189,9 @@ def transforma_apos_ingestao(context):
 
 
 defs = Definitions(
-    assets=[bronze_ceap_lancamento, bronze_camara_deputado_historico, modelos_dbt],
-    jobs=[ingestao_ceap, transformacao],
+    assets=[bronze_ceap_lancamento, bronze_camara_deputado_historico, modelos_dbt, alerta_desvio_postgres],
+    asset_checks=[alerta_igual_a_camada_semantica],
+    jobs=[ingestao_ceap, transformacao, etl_reverso],
     schedules=[diario_ano_corrente],
     sensors=[transforma_apos_ingestao],
     resources={"dbt": DbtCliResource(
