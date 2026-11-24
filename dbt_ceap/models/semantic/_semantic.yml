@@ -13,7 +13,7 @@ models:
   meta:
     grao: deputado (id_deputado)
     dimensoes: [deputado, UF, partido atual, trajetória partidária]
-    consumidores: [painel — bloco 1 e seletor do bloco 3, "ETL reverso (issue #7)"]
+    consumidores: [painel — bloco 1 e seletor do bloco 3, "ETL reverso: fila alerta.desvio_parlamentar no PostgreSQL"]
   config:
     contract: {enforced: true}
   tests:
@@ -66,6 +66,12 @@ models:
     data_type: bigint
     description: Posição pelo desvio acumulado (1 = maior desvio).
     meta: {metrica: true, unidade: posição, formula: "rank() por desvio_acumulado decrescente"}
+  - name: em_alerta
+    data_type: boolean
+    description: >-
+      Verdadeiro para o topo do ranking (var alerta_top_n = 15). É o top 15 do painel e o que o ETL
+      reverso publica na fila de auditoria.
+    meta: {metrica: true, unidade: regra, formula: "posicao_ranking ≤ 15"}
 
 - name: met_partido
   description: >-
