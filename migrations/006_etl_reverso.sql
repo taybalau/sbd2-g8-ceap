@@ -116,30 +116,44 @@ BEGIN
     END LOOP;
 END $$;
 
--- Privilégio mínimo, se as roles da migration 005 (controle de acesso, issue #10) existirem.
--- Nomes combinados na issue #10 e na análise de LGPD (docs/lgpd.md, seção 6.2):
---   ceap_pipeline  serviços (ingestão, dbt, Dagster e o ETL reverso): aqui só publica
---                  (lê e insere nos retratos e no registro de execução);
---   ceap_auditor   pessoa autorizada: lê a fila e registra decisões, sem mexer nos retratos;
---   ceap_consulta  consulta SQL e BI: nenhum acesso ao schema alerta.
+-- Privilégio mínimo. Nomes combinados na issue #10 e na análise de LGPD (docs/lgpd.md, seção 6.2):
+--   ceap_pipeline     serviços (ingestão, dbt, Dagster e o ETL reverso): aqui só publica
+--                     (lê e insere nos retratos e no registro de execução);
+--   ceap_auditor      pessoa autorizada: lê a fila e registra decisões, sem mexer nos retratos;
+--   ceap_consulta     consulta SQL e BI: nenhum acesso ao schema alerta (nada é concedido aqui).
+--   ceap_etl_reverso  usuário de serviço COM LOGIN do ETL reverso, membro só de ceap_pipeline. É com ele
+--                     que o pipeline e o Dagster conectam (docker-compose.yml), e não com o superusuário.
+--
+-- As roles de grupo são criadas aqui se a migration 005 (controle de acesso, issue #10) ainda não as
+-- criou, para os GRANT valerem em qualquer ordem. A 005 deve usar o mesmo guarda (criar só se não
+-- existir). A senha do usuário de serviço é de ambiente de desenvolvimento, como a do postgres no
+-- docker-compose.yml; em produção viria de um segredo.
 DO $$
 BEGIN
-    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ceap_pipeline') THEN
-        GRANT USAGE ON SCHEMA alerta TO ceap_pipeline;
-        GRANT SELECT ON alerta.desvio_parlamentar, alerta.execucao TO ceap_pipeline;
-        -- só as colunas de conteúdo; publicado_em e executado_em são do banco
-        GRANT INSERT (referencia_dados, id_deputado, nome_parlamentar, partido_atual, sigla_uf,
-                      posicao_ranking, desvio_acumulado, desvio_relativo, meses_acima_mediana,
-                      meses_com_gasto, janela_inicio, janela_fim) ON alerta.desvio_parlamentar TO ceap_pipeline;
-        GRANT INSERT (referencia_dados, linhas_recebidas, linhas_novas, origem) ON alerta.execucao TO ceap_pipeline;
-        GRANT USAGE ON SEQUENCE alerta.execucao_id_execucao_seq TO ceap_pipeline;
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ceap_pipeline') THEN
+        CREATE ROLE ceap_pipeline NOLOGIN;
     END IF;
-    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ceap_auditor') THEN
-        GRANT USAGE ON SCHEMA alerta TO ceap_auditor;
-        GRANT SELECT ON alerta.desvio_parlamentar, alerta.execucao, alerta.vw_fila_auditoria TO ceap_auditor;
-        GRANT SELECT ON alerta.tratamento TO ceap_auditor;
-        -- só o conteúdo da decisão; registrado_por e registrado_em são do banco
-        GRANT INSERT (id_deputado, referencia_dados, situacao, observacao) ON alerta.tratamento TO ceap_auditor;
-        GRANT USAGE ON SEQUENCE alerta.tratamento_id_tratamento_seq TO ceap_auditor;
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ceap_auditor') THEN
+        CREATE ROLE ceap_auditor NOLOGIN;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ceap_etl_reverso') THEN
+        CREATE ROLE ceap_etl_reverso LOGIN PASSWORD 'ceap_etl_reverso' NOSUPERUSER NOCREATEDB NOCREATEROLE;
     END IF;
 END $$;
+GRANT ceap_pipeline TO ceap_etl_reverso;
+
+GRANT USAGE ON SCHEMA alerta TO ceap_pipeline;
+GRANT SELECT ON alerta.desvio_parlamentar, alerta.execucao TO ceap_pipeline;
+-- só as colunas de conteúdo; publicado_em e executado_em são do banco
+GRANT INSERT (referencia_dados, id_deputado, nome_parlamentar, partido_atual, sigla_uf,
+              posicao_ranking, desvio_acumulado, desvio_relativo, meses_acima_mediana,
+              meses_com_gasto, janela_inicio, janela_fim) ON alerta.desvio_parlamentar TO ceap_pipeline;
+GRANT INSERT (referencia_dados, linhas_recebidas, linhas_novas, origem) ON alerta.execucao TO ceap_pipeline;
+GRANT USAGE ON SEQUENCE alerta.execucao_id_execucao_seq TO ceap_pipeline;
+
+GRANT USAGE ON SCHEMA alerta TO ceap_auditor;
+GRANT SELECT ON alerta.desvio_parlamentar, alerta.execucao, alerta.vw_fila_auditoria TO ceap_auditor;
+GRANT SELECT ON alerta.tratamento TO ceap_auditor;
+-- só o conteúdo da decisão; registrado_por e registrado_em são do banco
+GRANT INSERT (id_deputado, referencia_dados, situacao, observacao) ON alerta.tratamento TO ceap_auditor;
+GRANT USAGE ON SEQUENCE alerta.tratamento_id_tratamento_seq TO ceap_auditor;
