@@ -277,7 +277,7 @@ Rupturas de publicação CONHECIDAS e investigadas. Os testes de salto e de subc
 
 ### `gold.fct_gasto_mensal_parlamentar` 🔒
 
-**Grão:** deputado × versão SCD (partido da época) × competência. 57ª Legislatura, sem lideranças. gasto_versao é aditivo; gasto_deputado_mes, media_uf_mes e desvio_deputado_mes se REPETEM nas versões de um mesmo mês — não some essas colunas sem antes fazer DISTINCT por (id_deputado, competencia). Para somar desvio por partido use desvio_alocado.
+**Grão:** deputado × versão SCD (partido da época) × competência. 57ª Legislatura, sem lideranças. gasto_versao é aditivo; gasto_deputado_mes, mediana_uf_mes e desvio_deputado_mes se REPETEM nas versões de um mesmo mês — não some essas colunas sem antes fazer DISTINCT por (id_deputado, competencia). Para somar desvio por partido use desvio_alocado.
 
 | Coluna | Tipo | Descrição |
 | :--- | :--- | :--- |
@@ -292,10 +292,10 @@ Rupturas de publicação CONHECIDAS e investigadas. Os testes de salto e de subc
 | `qtd_lancamentos` | `BIGINT` | Lançamentos da versão no mês. |
 | `gasto_versao` | `DECIMAL(38,2)` | Gasto da versão no mês (R$). Aditivo: pode ser somado. |
 | `gasto_deputado_mes` | `DECIMAL(38,2)` | Gasto total do deputado no mês (R$). Repete-se entre versões do mesmo mês: NÃO somar. |
-| `media_uf_mes` | `DECIMAL(18,4)` | Média do gasto mensal dos deputados da mesma UF no mês (R$). NÃO somar. |
-| `qtd_deputados_uf_mes` | `BIGINT` | Deputados da UF com gasto no mês (base da média). |
-| `desvio_deputado_mes` | `DECIMAL(38,4)` | gasto_deputado_mes − media_uf_mes (R$). Repete-se entre versões: NÃO somar. |
-| `z_deputado_mes` | `DOUBLE` | Desvio em desvios-padrão da UF no mês. |
+| `mediana_uf_mes` | `DECIMAL(18,4)` | Mediana do gasto mensal dos deputados da mesma UF no mês (R$): a referência do desvio. NÃO somar. |
+| `qtd_deputados_uf_mes` | `BIGINT` | Deputados da UF com gasto no mês (base da mediana). |
+| `desvio_deputado_mes` | `DECIMAL(38,4)` | gasto_deputado_mes − mediana_uf_mes (R$). Repete-se entre versões: NÃO somar. |
+| `z_deputado_mes` | `DOUBLE` | Z-score robusto: (gasto − mediana da UF) ÷ (1,4826 × MAD da UF no mês). Nulo se o MAD for 0. |
 | `desvio_alocado` | `DECIMAL(18,4)` | Desvio do mês rateado entre as versões pelo gasto (R$). Aditivo: é o que se soma por partido. |
 
 ### `gold.mart_concentracao_parlamentar` 🔒
@@ -317,11 +317,11 @@ Rupturas de publicação CONHECIDAS e investigadas. Os testes de salto e de subc
 | `participacao_na_categoria` | `DOUBLE` | gasto_fornecedor ÷ gasto_categoria. |
 | `participacao_no_deputado` | `DOUBLE` | gasto_fornecedor ÷ gasto_deputado. |
 | `participacao_categoria_no_deputado` | `DOUBLE` | gasto_categoria ÷ gasto_deputado. |
-| `excesso_categoria_vs_uf` | `DOUBLE` | Gasto na subcota menos a média dos deputados da UF na mesma subcota (R$). |
+| `excesso_categoria_vs_uf` | `DECIMAL(38,2)` | Gasto na subcota menos a mediana dos deputados da UF na mesma subcota, contando com zero quem não gastou nela (R$). |
 
 ### `gold.mart_desvio_parlamentar` 🔒
 
-**Grão:** um deputado. Ranking do desvio acumulado acima da média mensal da UF (competências fechadas).
+**Grão:** um deputado. Ranking do desvio acumulado acima da mediana mensal da UF (competências comparáveis).
 
 | Coluna | Tipo | Descrição |
 | :--- | :--- | :--- |
@@ -334,11 +334,11 @@ Rupturas de publicação CONHECIDAS e investigadas. Os testes de salto e de subc
 | `meses_com_gasto` | `BIGINT` | Competências comparáveis com gasto. |
 | `gasto_total` | `DECIMAL(38,2)` | Gasto nas competências comparáveis (R$). |
 | `gasto_medio_mensal` | `DOUBLE` | Gasto médio por mês com gasto (R$). |
-| `media_uf_mensal` | `DOUBLE` | Média mensal da UF nos mesmos meses (R$). |
-| `desvio_acumulado` | `DECIMAL(38,4)` | Soma mês a mês de (gasto − média da UF) (R$). É a medida do ranking. |
-| `desvio_relativo` | `DOUBLE` | desvio_acumulado ÷ soma das médias da UF (ex.: 0,33 = 33% acima). |
-| `meses_acima_media` | `BIGINT` | Meses em que o gasto passou da média da UF. |
-| `z_medio` | `DOUBLE` | Média do desvio padronizado mensal. |
+| `mediana_uf_mensal` | `DOUBLE` | Média, nos mesmos meses, da mediana mensal da UF (R$). |
+| `desvio_acumulado` | `DECIMAL(38,4)` | Soma mês a mês de (gasto − mediana da UF) (R$). É a medida do ranking. |
+| `desvio_relativo` | `DOUBLE` | desvio_acumulado ÷ soma das medianas da UF (ex.: 0,33 = 33% acima). |
+| `meses_acima_mediana` | `BIGINT` | Meses em que o gasto passou da mediana da UF. |
+| `z_medio` | `DOUBLE` | Média dos z-scores robustos mensais. |
 | `hhi_fornecedores` | `DOUBLE` | Concentração em fornecedores (0 a 1; perto de 1 = poucos fornecedores). |
 | `posicao_ranking` | `BIGINT` | Posição pelo desvio acumulado (1 = maior desvio). |
 

@@ -3,7 +3,7 @@
 > Página gerada por `scripts/gerar_doc_testes.py` a partir do `manifest.json` e do
 > `run_results.json` do dbt. Não edite à mão: rode o script depois de um `dbt build`.
 
-**Última execução:** 17/11/2026 13:25 UTC, numa subida do zero (`docker compose up --build`) com os CSVs da Câmara baixados no mesmo dia.
+**Última execução:** 19/11/2026 12:45 UTC, numa subida do zero (`docker compose up --build`) com os CSVs da Câmara baixados no mesmo dia.
 
 | Resultado | Testes |
 | :--- | ---: |
@@ -135,8 +135,8 @@ This model has an enforced contract that failed.
 
 | Fonte | Carregada em (UTC) | Idade | Limites | Resultado |
 | :--- | :--- | ---: | :--- | :--- |
-| `bronze.camara_deputado_historico` | 2026-11-17 13:23 | 0.0 h | aviso 7 dias · erro 30 dias | ✅ passou |
-| `bronze.ceap_lancamento` | 2026-11-17 13:15 | 0.0 h | aviso 26 h · erro 48 h | ✅ passou |
+| `bronze.camara_deputado_historico` | 2026-11-19 12:40 | 0.0 h | aviso 7 dias · erro 30 dias | ✅ passou |
+| `bronze.ceap_lancamento` | 2026-11-19 12:40 | 0.0 h | aviso 26 h · erro 48 h | ✅ passou |
 
 ## Outros testes da plataforma
 

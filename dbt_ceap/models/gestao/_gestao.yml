@@ -4,7 +4,7 @@ models:
 - name: fct_gasto_mensal_parlamentar
   description: >
     **Grão:** deputado × versão SCD (partido da época) × competência. 57ª Legislatura, sem lideranças.
-    gasto_versao é aditivo; gasto_deputado_mes, media_uf_mes e desvio_deputado_mes se REPETEM nas versões
+    gasto_versao é aditivo; gasto_deputado_mes, mediana_uf_mes e desvio_deputado_mes se REPETEM nas versões
     de um mesmo mês — não some essas colunas sem antes fazer DISTINCT por (id_deputado, competencia).
     Para somar desvio por partido use desvio_alocado.
   meta:
@@ -15,7 +15,7 @@ models:
     - desvio_alocado
     soma_proibida:
     - gasto_deputado_mes
-    - media_uf_mes
+    - mediana_uf_mes
     - desvio_deputado_mes
   tests:
   - grao_unico:
@@ -56,17 +56,20 @@ models:
   - name: gasto_deputado_mes
     description: 'Gasto total do deputado no mês (R$). Repete-se entre versões do mesmo mês: NÃO somar.'
     data_type: decimal(38,2)
-  - name: media_uf_mes
-    description: Média do gasto mensal dos deputados da mesma UF no mês (R$). NÃO somar.
+  - name: mediana_uf_mes
+    description: >-
+      Mediana do gasto mensal dos deputados da mesma UF no mês (R$): a referência do desvio.
+      NÃO somar.
     data_type: decimal(18,4)
   - name: qtd_deputados_uf_mes
-    description: Deputados da UF com gasto no mês (base da média).
+    description: Deputados da UF com gasto no mês (base da mediana).
     data_type: bigint
   - name: desvio_deputado_mes
-    description: 'gasto_deputado_mes − media_uf_mes (R$). Repete-se entre versões: NÃO somar.'
+    description: 'gasto_deputado_mes − mediana_uf_mes (R$). Repete-se entre versões: NÃO somar.'
     data_type: decimal(38,4)
   - name: z_deputado_mes
-    description: Desvio em desvios-padrão da UF no mês.
+    description: >-
+      Z-score robusto: (gasto − mediana da UF) ÷ (1,4826 × MAD da UF no mês). Nulo se o MAD for 0.
     data_type: double
   - name: desvio_alocado
     description: >-
@@ -77,7 +80,7 @@ models:
       enforced: true
 - name: mart_desvio_parlamentar
   description: >-
-    **Grão:** um deputado. Ranking do desvio acumulado acima da média mensal da UF (competências fechadas).
+    **Grão:** um deputado. Ranking do desvio acumulado acima da mediana mensal da UF (competências comparáveis).
   meta:
     grao: deputado (id_deputado)
   tests:
@@ -112,20 +115,20 @@ models:
   - name: gasto_medio_mensal
     description: Gasto médio por mês com gasto (R$).
     data_type: double
-  - name: media_uf_mensal
-    description: Média mensal da UF nos mesmos meses (R$).
+  - name: mediana_uf_mensal
+    description: Média, nos mesmos meses, da mediana mensal da UF (R$).
     data_type: double
   - name: desvio_acumulado
-    description: Soma mês a mês de (gasto − média da UF) (R$). É a medida do ranking.
+    description: Soma mês a mês de (gasto − mediana da UF) (R$). É a medida do ranking.
     data_type: decimal(38,4)
   - name: desvio_relativo
-    description: 'desvio_acumulado ÷ soma das médias da UF (ex.: 0,33 = 33% acima).'
+    description: 'desvio_acumulado ÷ soma das medianas da UF (ex.: 0,33 = 33% acima).'
     data_type: double
-  - name: meses_acima_media
-    description: Meses em que o gasto passou da média da UF.
+  - name: meses_acima_mediana
+    description: Meses em que o gasto passou da mediana da UF.
     data_type: bigint
   - name: z_medio
-    description: Média do desvio padronizado mensal.
+    description: Média dos z-scores robustos mensais.
     data_type: double
   - name: hhi_fornecedores
     description: Concentração em fornecedores (0 a 1; perto de 1 = poucos fornecedores).
@@ -271,8 +274,10 @@ models:
     description: gasto_categoria ÷ gasto_deputado.
     data_type: double
   - name: excesso_categoria_vs_uf
-    description: Gasto na subcota menos a média dos deputados da UF na mesma subcota (R$).
-    data_type: double
+    description: >-
+      Gasto na subcota menos a mediana dos deputados da UF na mesma subcota, contando com zero quem
+      não gastou nela (R$).
+    data_type: decimal(38,2)
   config:
     contract:
       enforced: true
