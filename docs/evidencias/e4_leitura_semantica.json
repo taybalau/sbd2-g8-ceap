@@ -1,10 +1,10 @@
 {
-  "medido_em": "2026-11-24T13:16:28+00:00",
+  "medido_em": "2026-11-24T13:31:07+00:00",
   "n_leituras": 20,
   "ambiente": "Linux x86_64, Python 3.12.16, DuckDB 1.3.2",
-  "banco_bytes": 152317952,
+  "banco_bytes": 150482944,
   "volume": {
-    "lancamentos_no_fato": 801743,
+    "lancamentos_no_fato": 802861,
     "linhas_por_view": {
       "met_parlamentar": 622,
       "met_partido": 26,
@@ -15,35 +15,35 @@
   },
   "caminhos": {
     "warehouse_views": {
-      "latencia_mediana_ms": 197.8,
-      "latencia_p90_ms": 212.6,
+      "latencia_mediana_ms": 216.7,
+      "latencia_p90_ms": 250.9,
       "linhas_lidas": 91227,
       "custo_copia_ms": 0,
       "bytes": null,
       "defasagem": "nenhuma (lê a Gold atual)"
     },
     "warehouse_tabelas": {
-      "latencia_mediana_ms": 80.5,
-      "latencia_p90_ms": 86.1,
+      "latencia_mediana_ms": 82.7,
+      "latencia_p90_ms": 85.6,
       "linhas_lidas": 91227,
-      "custo_copia_ms": 2872.9,
+      "custo_copia_ms": 2967.5,
       "bytes": 6565888,
       "defasagem": "até o próximo build"
     },
     "copia_parquet": {
-      "latencia_mediana_ms": 72.0,
-      "latencia_p90_ms": 78.1,
+      "latencia_mediana_ms": 70.8,
+      "latencia_p90_ms": 76.9,
       "linhas_lidas": 91227,
-      "custo_copia_ms": 192.9,
-      "bytes": 6813100,
+      "custo_copia_ms": 249.9,
+      "bytes": 6806326,
       "defasagem": "até a próxima exportação agendada"
     },
     "copia_csv": {
-      "latencia_mediana_ms": 146.5,
-      "latencia_p90_ms": 156.2,
+      "latencia_mediana_ms": 148.0,
+      "latencia_p90_ms": 162.4,
       "linhas_lidas": 91227,
-      "custo_copia_ms": 171.5,
-      "bytes": 12294727,
+      "custo_copia_ms": 167.8,
+      "bytes": 12294717,
       "defasagem": "até a próxima exportação agendada"
     }
   }
