@@ -1,6 +1,6 @@
 """
 Exercita a orquestração de propósito: retry, dependência derrubada, teste de dados
-reprovado e backfill. Cada cenário roda num subprocesso com o ambiente adulterado e
+reprovado, backfill e (E4) destino do ETL reverso fora do ar. Cada cenário roda num subprocesso com o ambiente adulterado e
 grava as execuções no DAGSTER_HOME (aparecem depois na UI do Dagster).
 
 Uso:
@@ -52,6 +52,8 @@ def _executar(job: str, particao: str | None) -> dict:
     asset_checks = [e for e in res.all_events if e.event_type_value == "ASSET_CHECK_EVALUATION"]
     checks_reprovados = [e.event_specific_data.asset_check_key.name for e in asset_checks
                          if not e.event_specific_data.passed]
+    checks_aprovados = sorted(e.event_specific_data.asset_check_key.name for e in asset_checks
+                              if e.event_specific_data.passed)
     materializados = sorted({"/".join(e.asset_key.path) for e in res.all_events
                              if e.event_type == DagsterEventType.ASSET_MATERIALIZATION})
     # Testes singulares que tocam vários modelos não viram asset check no dagster-dbt;
@@ -76,7 +78,8 @@ def _executar(job: str, particao: str | None) -> dict:
             "passos_iniciados": sorted(iniciados),
             "passos_nao_executados": sorted(todos - iniciados),
             "assets_materializados": materializados,
-            "checks_dbt_reprovados": checks_reprovados}
+            "checks_dbt_reprovados": checks_reprovados,
+            "checks_aprovados": checks_aprovados}
 
 
 def _impressao_digital(lake: Path) -> dict:
@@ -98,6 +101,22 @@ def _impressao_digital(lake: Path) -> dict:
         if (p / "_delta_log").exists():
             out[f"bronze_{nome}_versao"] = DeltaTable(str(p)).version()
     return out
+
+
+def _estado_destino() -> dict:
+    """Estado da fila de auditoria no PostgreSQL (destino do ETL reverso)."""
+    sys.path.insert(0, str(RAIZ / "etl_reverso"))
+    import publicar_alertas
+    try:
+        with publicar_alertas.conectar_destino() as con:
+            linhas, retratos, execucoes = con.execute("""
+                select (select count(*) from alerta.desvio_parlamentar),
+                       (select count(distinct referencia_dados) from alerta.desvio_parlamentar),
+                       (select count(*) from alerta.execucao)""").fetchone()
+        return {"linhas_na_fila": linhas, "retratos": retratos, "execucoes_registradas": execucoes,
+                "ids_do_retrato_atual": publicar_alertas.ids_publicados()}
+    except Exception as e:  # noqa: BLE001
+        return {"destino_erro": str(e).strip().splitlines()[0][:200]}
 
 
 def _sub(job: str, particao: str | None = None, **env) -> dict:
@@ -136,7 +155,7 @@ def cenario_base():
     r = [_sub("ingestao_ceap", a) for a in ("2023", "2024", "2025", "2026")]
     r.append(_sub("transformacao"))
     return {"execucoes": r, "freshness_fontes": _freshness_fontes(),
-            "estado": _impressao_digital(LAKE)}
+            "estado": _impressao_digital(LAKE), "destino_etl_reverso": _estado_destino()}
 
 
 def cenario_retry():
@@ -206,9 +225,28 @@ def cenario_backfill():
             "bronze_por_ano": [list(map(str, x)) for x in por_ano]}
 
 
+def cenario_destino_fora():
+    """ETL reverso com o destino fora do ar (E4): o PostgreSQL não responde. A publicação tem de
+    falhar após 3 retries sem mexer na Gold nem deixar linha pela metade na fila; com o destino de
+    volta, o job etl_reverso publica e, por ser idempotente, não duplica nada."""
+    sys.path.insert(0, str(RAIZ / "etl_reverso"))
+    import publicar_alertas
+    antes, destino_antes = _impressao_digital(LAKE), _estado_destino()
+    r_fora = _sub("etl_reverso", DB_PORT="1")  # porta sem PostgreSQL: conexão recusada
+    destino_durante = _estado_destino()
+    r_volta = _sub("etl_reverso")
+    destino_depois = _estado_destino()
+    esperados = [a[1] for a in publicar_alertas.ler_alertas()]
+    return {"execucao_com_destino_fora": r_fora, "execucao_com_destino_de_volta": r_volta,
+            "antes": antes, "depois": _impressao_digital(LAKE),
+            "destino_antes": destino_antes, "destino_depois_da_falha": destino_durante,
+            "destino_depois_da_volta": destino_depois,
+            "fila_igual_a_camada_semantica": destino_depois.get("ids_do_retrato_atual") == esperados}
+
+
 CENARIOS = {"base": cenario_base, "retry": cenario_retry, "fonte_fora": cenario_fonte_fora,
             "api_fora": cenario_api_fora, "dado_sujo": cenario_dado_sujo,
-            "backfill": cenario_backfill}
+            "backfill": cenario_backfill, "destino_fora": cenario_destino_fora}
 
 if __name__ == "__main__":
     if len(sys.argv) > 2 and sys.argv[1] == "--executar":
