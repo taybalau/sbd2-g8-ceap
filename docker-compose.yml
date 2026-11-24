@@ -49,12 +49,14 @@ services:
     container_name: ceap_e3_pipeline
     command: python orquestracao/demo_falhas.py base
     environment: &conexao_oltp
-      # E4: o ETL reverso publica a fila de auditoria no PostgreSQL da E1
+      # E4: o ETL reverso publica a fila de auditoria no PostgreSQL da E1 com um usuário de serviço
+      # de privilégio mínimo (membro só de ceap_pipeline; migrations/006_etl_reverso.sql), e não
+      # com o superusuário. A ingestão da E1 continua com postgres porque aplica as migrations.
       DB_HOST: db
       DB_PORT: "5432"
       DB_NAME: ceap_oltp
-      DB_USER: postgres
-      DB_PASSWORD: postgres
+      DB_USER: ceap_etl_reverso
+      DB_PASSWORD: ceap_etl_reverso
     volumes:
       - ./base-dados:/app/base-dados
       - ./lakehouse:/app/lakehouse

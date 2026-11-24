@@ -9,6 +9,8 @@ Publica os MESMOS parlamentares em alerta pelos dois caminhos e mede, com o volu
       3. ter o registro protegido contra alteração;
       4. ter acesso por perfil (privilégio mínimo).
 Nada fica gravado no PostgreSQL (tudo em transações desfeitas) e o CSV vai para uma pasta temporária.
+Conecta como administrador (DB_USER=postgres) para poder fazer o papel do auditor com
+SET ROLE ceap_auditor: as decisões são registradas com as permissões reais do auditor.
 Grava docs/evidencias/e4_etl_reverso_opcao_nula.json e imprime a tabela em Markdown.
 
 Uso (plataforma no ar, dentro do container da E3):
@@ -68,6 +70,7 @@ def main():
 
         # ---- 1. a decisão do auditor sobrevive à próxima publicação?
         with etl.conectar_destino() as con, con.transaction(force_rollback=True):
+            con.execute("set role ceap_auditor")  # o auditor de verdade: só lê a fila e registra decisões
             alvo = con.execute("select id_deputado, referencia_dados from alerta.vw_fila_auditoria "
                                "order by posicao_ranking limit 1").fetchone()
             con.execute("insert into alerta.tratamento (id_deputado, referencia_dados, situacao, observacao) "
