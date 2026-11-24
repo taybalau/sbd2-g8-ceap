@@ -49,7 +49,7 @@ Uma linha por dado. O detalhe por camada e coluna está na [seção 3](#3-invent
 ### 2.1 Papéis
 
 - **Câmara dos Deputados e Receita Federal** são as controladoras dos dados na origem. A Câmara publica a CEAP e os dados de deputados por obrigação legal e transparência ativa (art. 7º, II e art. 23 da LGPD, como já registrado na planilha da E1; Lei de Acesso à Informação).
-- **Squad G8 / UnB (disciplina SBD2)** faz um **tratamento secundário**: reutiliza dado público para análise. A premissa é que a UnB é **órgão de pesquisa** (art. 5º, XVIII: entidade pública que inclui a pesquisa em sua missão institucional) e que o projeto é um **estudo**. É o que sustenta o art. 7º, IV. **Premissa a validar.**
+- **Squad G8 / UnB (disciplina SBD2)** faz um **tratamento secundário**: reutiliza dado público para análise. A premissa é que a UnB é **órgão de pesquisa** (art. 5º, XVIII: entidade pública que inclui a pesquisa em sua missão institucional) e que o projeto é um **estudo**. É o que sustenta o art. 7º, IV. 
 
 ### 2.2 Bases usadas
 
