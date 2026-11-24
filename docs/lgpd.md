@@ -156,7 +156,7 @@ Aqui estão **pessoas comuns**, não políticos. Elas não aparecem na CEAP; apa
 
 #### 3.3.2 Dá para mascarar o CPF ou guardar só um hash?
 
-A Receita **já publica o CPF mascarado** (`***.382.911-**`: esconde os 3 primeiros e os 2 últimos dígitos). Nós nunca temos o CPF completo do sócio. A pergunta é o que fazer com o valor mascarado e o nome.
+A Receita **já publica o CPF mascarado** (`***.382.911-**`): esconde os 3 primeiros e os 2 últimos dígitos). Nós nunca temos o CPF completo do sócio. A pergunta é o que fazer com o valor mascarado e o nome.
 
 Um detalhe que pesa na avaliação: os 2 dígitos verificadores do CPF são calculados a partir dos 9 primeiros. Com 6 dos 9 visíveis, restam **no máximo 1.000 CPFs válidos** compatíveis com a máscara. Ela impede o uso direto como CPF, mas não impede que alguém com outra lista de CPFs completos reconstrua o número. Por outro lado, a máscara tem só 10⁶ valores para centenas de milhões de CPFs, então o par (nome, máscara) é muito seletivo, mas **não é um identificador único**.
 
