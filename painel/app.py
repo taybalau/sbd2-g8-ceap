@@ -102,7 +102,7 @@ st.markdown(
     f"**{brl(lider.gasto_medio_mensal)}/mês**, contra {brl(lider.mediana_uf_mensal)} da mediana da UF — "
     f"{lider.desvio_relativo:+.0%}, acumulando **{brl(lider.desvio_acumulado)}** acima da mediana "
     f"em {lider.meses_com_gasto} meses ({lider.meses_acima_mediana} deles acima).")
-top = dep.head(15).assign(
+top = dep.query("em_alerta").assign(
     gm=lambda x: x.gasto_medio_mensal.map(brl), mu=lambda x: x.mediana_uf_mensal.map(brl),
     rel=lambda x: x.desvio_relativo.map(lambda v: f"{v:+.0%}"))
 st.plotly_chart(barras_h(top, "desvio_acumulado", "rotulo", AZUL, {
@@ -151,7 +151,7 @@ with st.expander(f"Quanto erraria quem usasse o partido atual: {brl(ctx.erro_tot
 # ------------------------------------------------------------ 3. concentração
 st.header("3. Onde está o dinheiro: categorias e fornecedores")
 opcoes = top[["id_deputado", "rotulo"]].values.tolist()
-escolha = st.selectbox("Parlamentar (top 15 do ranking)", opcoes, format_func=lambda o: o[1])
+escolha = st.selectbox(f"Parlamentar (top {len(top)} do ranking, em alerta)", opcoes, format_func=lambda o: o[1])
 cat = (d["cat"].query("id_deputado == @escolha[0]").sort_values("posicao_excesso")
        .rename(columns={"gasto_categoria": "gasto", "excesso_categoria_vs_uf": "excesso",
                         "participacao_categoria_no_deputado": "part"}))

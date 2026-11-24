@@ -23,6 +23,9 @@ vars:
   anos_esperados: [2023, 2024, 2025, 2026]
   # Camada semântica (E4): partidos com menos deputados que isto ficam fora do ranking de partidos.
   min_deputados_partido: 5
+  # E4: quantos parlamentares do topo do ranking ficam em alerta. É o top do painel e o que o
+  # ETL reverso publica na fila de auditoria do PostgreSQL (mesma regra nas duas telas).
+  alerta_top_n: 15
 
 models:
   ceap:
