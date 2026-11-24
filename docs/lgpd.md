@@ -120,7 +120,23 @@ Na CEAP, o fornecedor pode ser CPF no lugar de CNPJ (`dim_fornecedor.tipo_docume
 
 ### Staging do OLTP (`stg_ceap_raw`)
 
-A tabela guarda o CSV **bruto** de um ano (`txtCNPJCPF` com o CPF completo do fornecedor, além de `cpf` do deputado e `txtPassageiro`). No `ingest_ceap.py` ela recebe `TRUNCATE` no início e no fim de cada ano, e o `COMMIT` vem depois do segundo, então **depois de uma carga concluída ela fica vazia**. A exposição é transitória, mas existe durante a carga, e a máscara aplicada na Bronze não a alcança. Controles: (a) mascarar na própria carga, aplicando o mesmo tratamento do OLTP antes de gravar em `fornecedor` e `despesa_ceap`; (b) teste que reprova se `select count(*) from stg_ceap_raw` for maior que zero depois da ingestão; (c) nenhum papel, além de `ceap_pipeline`, tem acesso à tabela (o `REVOKE` do apêndice A.1 já cobre). Um `COPY` interrompido desfaz a transação, mas só um `VACUUM` remove fisicamente as linhas mortas.
+A tabela guarda o CSV **bruto** de um ano: `txtCNPJCPF` com o CPF completo do fornecedor, além de `cpf` do deputado e `txtPassageiro`.
+
+No `ingest_ceap.py` ela recebe `TRUNCATE` no início e no fim de cada ano, e o `COMMIT` vem depois do segundo. Por isso, **depois de uma carga concluída ela fica vazia**. A exposição é transitória, mas existe durante a carga, e a máscara aplicada na Bronze não a alcança.
+
+**Controles:**
+
+- **(a)** Mascarar na própria carga, aplicando o mesmo tratamento do OLTP antes de gravar em `fornecedor` e `despesa_ceap`.
+- **(b)** Teste que reprova se `select count(*) from stg_ceap_raw` for maior que zero depois da ingestão.
+- **(c)** Nenhum papel de aplicação além de `ceap_pipeline` tem acesso à tabela. O `REVOKE ... FROM PUBLIC` do apêndice A.1 retira o que `PUBLIC` tinha, e o `GRANT` libera só esse papel.
+
+**Exceção administrativa:** o superusuário `postgres` e o dono da tabela não são limitados por `REVOKE` nem por `GRANT`, e continuam lendo a staging. Esse acesso é mitigado, não eliminado:
+
+- o `postgres` fica restrito à administração, sem uso pelos serviços, após a migração 005;
+- a senha sai do valor padrão do `docker-compose.yml`;
+- a staging fica vazia fora da janela de carga (item b).
+
+Um `COPY` interrompido desfaz a transação, mas só um `VACUUM` remove fisicamente as linhas mortas.
 
 ### Quantos fornecedores são pessoa física?
 Não há número medido no repositório (os CSVs não são versionados), então este documento não afirma nenhum. Para medir, na Silver:
@@ -280,11 +296,13 @@ Esta seção funciona como um relatório de impacto simplificado (art. 38). Ela 
 
 ### 6.4 Mecanismo em cada armazenamento
 
-- **PostgreSQL:** o privilégio por coluna é nativo (`GRANT SELECT (col1, col2) ON tabela`). Os papéis do apêndice A.1 revogam tudo de `PUBLIC`, liberam só as colunas permitidas ao `ceap_consulta` e oferecem o fornecedor por uma view que mascara o CPF. Os serviços do compose passam a usar logins que herdam de `ceap_pipeline`, e o `postgres` fica para administração.
-- **DuckDB e lakehouse:** o DuckDB não tem `GRANT` nem `REVOKE`; um arquivo `.duckdb` ou uma pasta Delta é tudo ou nada. Por isso **uma view sem a coluna, dentro do mesmo arquivo, não protege nada**: quem abre o arquivo lê a tabela-base. A barreira tem de ser o **arquivo**. O dbt grava em `lakehouse/restrito/ceap.duckdb`; a função `publicar_consumo` (apêndice A.3) copia só as colunas permitidas para `lakehouse/consumo/ceap_painel.duckdb`; o painel monta só essa pasta, em `:ro` (apêndice A.4).
+### 6.4 Mecanismo em cada armazenamento
+
+- **PostgreSQL:** o privilégio por coluna é nativo (`GRANT SELECT (col1, col2) ON tabela`). Os papéis do apêndice A.1 revogam tudo de `PUBLIC`, liberam só as colunas permitidas ao `ceap_consulta` e oferecem o fornecedor por uma view que mascara o CPF. Isso limita os papéis de aplicação; **superusuário e dono da tabela ignoram `GRANT` e `REVOKE`**, então o controle depende também de manter o `postgres` fora do uso corrente dos serviços. Os serviços do compose passam a usar logins que herdam de `ceap_pipeline`, e o `postgres` fica para administração.
+- **DuckDB e lakehouse:** o DuckDB não tem `GRANT` nem `REVOKE`; um arquivo `.duckdb` ou uma pasta Delta é tudo ou nada. Por isso **uma view sem a coluna, dentro do mesmo arquivo, não protege nada**: quem abre o arquivo lê a tabela-base. A barreira tem de ser o **arquivo**. O dbt grava em `lakehouse/restrito/ceap.duckdb`; a função `publicar_consumo` ([apêndice A.3](#a3-publicação-do-arquivo-de-consumo)) copia só as colunas permitidas para `lakehouse/consumo/ceap_painel.duckdb`; o painel monta só essa pasta, em `:ro` ([apêndice A.4](#a4-volumes-no-docker-composeyml)).
 - **Painel:** passa a abrir o arquivo de consumo. As duas leituras que hoje faz na Silver (`max(competencia)` e `max(ingerido_em)` de `silver.fct_lancamento_ceap`, e `silver.ruptura_publicacao`) viram tabelas de metadados no próprio arquivo de consumo.
 - **Segredo:** `CEAP_PSEUDO_KEY` é variável de ambiente apenas dos serviços da zona restrita. O `.env` já está no `.gitignore`; a chave não entra no repositório, no lakehouse nem no container do painel.
-
+- 
 ### 6.5 Isso conta como "recorte de coluna com privilégio mínimo"?
 
 **Conta, nos dois armazenamentos, com uma condição em cada um:**
