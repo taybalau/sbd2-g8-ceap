@@ -26,7 +26,9 @@ PESSOAL = {"txtPassageiro": "dado pessoal de terceiro: fica só na Bronze",
 CAMADAS = [
     ("Bronze", "Cópia fiel dos dados públicos, em Delta Lake (`lakehouse/bronze/`), tudo como texto."),
     ("Silver", "Dados tipados, dimensões e o fato atômico (schema `silver` do `ceap.duckdb`)."),
-    ("Gold", "Tabelas de consumo do painel (schema `gold` do `ceap.duckdb`)."),
+    ("Gold", "Tabelas analíticas com grão declarado (schema `gold` do `ceap.duckdb`)."),
+    ("Semântica", "Camada semântica de métricas da E4 (views do schema `semantico`): a única fonte do "
+                  "painel e do ETL reverso."),
 ]
 
 
@@ -47,7 +49,7 @@ def main():
             if info.get("description"):
                 glossario.setdefault(c, info["description"])
 
-    tabelas = {"Bronze": [], "Silver": [], "Gold": []}
+    tabelas = {"Bronze": [], "Silver": [], "Gold": [], "Semântica": []}
     for s in manifest["sources"].values():
         tabelas["Bronze"].append({
             "nome": f"bronze/{s['name']}", "descricao": s.get("description"), "grao": None,
@@ -57,7 +59,7 @@ def main():
     for no in manifest["nodes"].values():
         if no["resource_type"] not in ("model", "seed") or no["package_name"] != "ceap":
             continue
-        camada = "Gold" if no["schema"] == "gold" else "Silver"
+        camada = {"gold": "Gold", "semantico": "Semântica"}.get(no["schema"], "Silver")
         tipos = dict(con.execute(
             "select column_name, data_type from information_schema.columns "
             "where table_schema = ? and table_name = ? order by ordinal_position",
@@ -76,7 +78,7 @@ def main():
            "> as descrições, dos arquivos `.yml` do dbt (`dbt_ceap/models/**/_*.yml`). Para mudar uma",
            "> descrição, edite o `.yml` e rode o script de novo.", "",
            "O banco transacional da E1 (PostgreSQL) está descrito em [Modelo de dados](modelo-de-dados.md).",
-           "A camada analítica da E3 tem três camadas:", "",
+           "A camada analítica tem quatro camadas (Bronze, Silver e Gold da E3; Semântica da E4):", "",
            "| Camada | Conteúdo | Tabelas |", "| :--- | :--- | ---: |"]
     out += [f"| [{c}](#{c.lower()}) | {d} | {len(tabelas[c])} |" for c, d in CAMADAS]
     out += ["", "Legenda: 🔒 contrato de esquema (`contract: enforced`): o build reprova se a coluna "
