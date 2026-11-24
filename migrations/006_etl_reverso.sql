@@ -10,6 +10,8 @@
 --
 -- Insert-only, como o resto do banco (ADR-0001): cada publicação é um retrato novo e cada decisão do
 -- auditor é um evento novo. Nada é alterado ou apagado; um gatilho impede UPDATE e DELETE.
+-- Autoria e horário não vêm de quem insere: um gatilho grava o usuário da conexão e a hora do banco,
+-- e as roles só podem inserir as colunas de conteúdo (GRANT por coluna).
 CREATE SCHEMA IF NOT EXISTS alerta;
 
 -- Um retrato do top do ranking a cada publicação. A chave (referencia_dados, id_deputado) torna a
@@ -39,8 +41,8 @@ CREATE TABLE IF NOT EXISTS alerta.tratamento (
     situacao          VARCHAR(30)  NOT NULL
         CHECK (situacao IN ('em_analise', 'sem_irregularidade', 'encaminhado')),
     observacao        TEXT,
-    registrado_por    VARCHAR(100) NOT NULL DEFAULT current_user,
-    registrado_em     TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    registrado_por    VARCHAR(100) NOT NULL DEFAULT session_user,  -- sempre o usuário da conexão (gatilho)
+    registrado_em     TIMESTAMPTZ  NOT NULL DEFAULT now(),         -- sempre a hora do banco (gatilho)
     FOREIGN KEY (referencia_dados, id_deputado)
         REFERENCES alerta.desvio_parlamentar (referencia_dados, id_deputado)
 );
@@ -76,6 +78,23 @@ FROM atual a
 LEFT JOIN ultima_decisao d USING (id_deputado)
 ORDER BY a.posicao_ranking;
 
+-- Autoria e horário carimbados pelo banco: o que vier no INSERT é ignorado. Assim ninguém registra
+-- uma decisão em nome de outra pessoa nem com data falsa para passar na frente de outra decisão
+-- (a fila mostra a mais recente). session_user é o usuário que conectou, mesmo depois de SET ROLE.
+CREATE OR REPLACE FUNCTION alerta.carimba_autoria() RETURNS trigger AS $$
+BEGIN
+    IF TG_TABLE_NAME = 'tratamento' THEN
+        NEW.registrado_por := session_user;
+        NEW.registrado_em  := now();
+    ELSIF TG_TABLE_NAME = 'desvio_parlamentar' THEN
+        NEW.publicado_em := now();
+    ELSIF TG_TABLE_NAME = 'execucao' THEN
+        NEW.executado_em := now();
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
 -- Insert-only garantido pelo banco, não só pela convenção.
 CREATE OR REPLACE FUNCTION alerta.impede_alteracao() RETURNS trigger AS $$
 BEGIN
@@ -91,6 +110,9 @@ BEGIN
         EXECUTE format('DROP TRIGGER IF EXISTS insert_only ON alerta.%I', t);
         EXECUTE format('CREATE TRIGGER insert_only BEFORE UPDATE OR DELETE ON alerta.%I '
                        'FOR EACH ROW EXECUTE FUNCTION alerta.impede_alteracao()', t);
+        EXECUTE format('DROP TRIGGER IF EXISTS carimba_autoria ON alerta.%I', t);
+        EXECUTE format('CREATE TRIGGER carimba_autoria BEFORE INSERT ON alerta.%I '
+                       'FOR EACH ROW EXECUTE FUNCTION alerta.carimba_autoria()', t);
     END LOOP;
 END $$;
 
@@ -104,13 +126,20 @@ DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ceap_pipeline') THEN
         GRANT USAGE ON SCHEMA alerta TO ceap_pipeline;
-        GRANT SELECT, INSERT ON alerta.desvio_parlamentar, alerta.execucao TO ceap_pipeline;
+        GRANT SELECT ON alerta.desvio_parlamentar, alerta.execucao TO ceap_pipeline;
+        -- só as colunas de conteúdo; publicado_em e executado_em são do banco
+        GRANT INSERT (referencia_dados, id_deputado, nome_parlamentar, partido_atual, sigla_uf,
+                      posicao_ranking, desvio_acumulado, desvio_relativo, meses_acima_mediana,
+                      meses_com_gasto, janela_inicio, janela_fim) ON alerta.desvio_parlamentar TO ceap_pipeline;
+        GRANT INSERT (referencia_dados, linhas_recebidas, linhas_novas, origem) ON alerta.execucao TO ceap_pipeline;
         GRANT USAGE ON SEQUENCE alerta.execucao_id_execucao_seq TO ceap_pipeline;
     END IF;
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ceap_auditor') THEN
         GRANT USAGE ON SCHEMA alerta TO ceap_auditor;
         GRANT SELECT ON alerta.desvio_parlamentar, alerta.execucao, alerta.vw_fila_auditoria TO ceap_auditor;
-        GRANT SELECT, INSERT ON alerta.tratamento TO ceap_auditor;
+        GRANT SELECT ON alerta.tratamento TO ceap_auditor;
+        -- só o conteúdo da decisão; registrado_por e registrado_em são do banco
+        GRANT INSERT (id_deputado, referencia_dados, situacao, observacao) ON alerta.tratamento TO ceap_auditor;
         GRANT USAGE ON SEQUENCE alerta.tratamento_id_tratamento_seq TO ceap_auditor;
     END IF;
 END $$;
