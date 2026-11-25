@@ -95,7 +95,7 @@ nav:
           - "Semana 08": diario/semana-08.md
           - "Semana 09": diario/semana-09.md
           - "Semana 10": diario/semana-10.md
-      - "Uso de IA": ia.md
+      - Uso de IA: ia.md
 
 
 markdown_extensions:
