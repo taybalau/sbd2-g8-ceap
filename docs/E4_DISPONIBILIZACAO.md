@@ -206,7 +206,7 @@ Medido com `scripts/medir_leitura_semantica.py` (20 leituras por caminho, conex�
 | **Warehouse, views (adotado)** | **217 · 251 ms** | **nenhum** | **nenhum** | **nenhuma** |
 | Federação (DuckDB + `ATTACH` do PostgreSQL) | 135 · 143 ms | nenhum | nenhum | nenhuma |
 
-Todos os caminhos ficam abaixo de 0,25 s, e o painel guarda o resultado em cache por 5 minutos: com o volume da CEAP, a latência não decide. As views custam ~130 ms a mais por leitura, mas não há cópia para manter nem risco de ler uma cópia velha.
+Todos os caminhos ficam em torno de 0,25 s ou menos, e o painel guarda o resultado em cache por 5 minutos: com o volume da CEAP, a latência não decide. As views custam ~130 ms a mais por leitura, mas não há cópia para manter nem risco de ler uma cópia velha.
 
 #### 5.2. Por que não a federação para o auditor
 

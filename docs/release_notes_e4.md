@@ -24,6 +24,8 @@ A pergunta de gestão continua a mesma da E1:
 
 > *"Quais parlamentares e partidos da 57ª Legislatura (2023–2026) apresentam maior desvio de gastos acima da média mensal da CEAP, e quais categorias e fornecedores concentram esses recursos?"*
 
+Desde 19/11/2026, a "média mensal" da pergunta é medida pela **mediana** do gasto mensal dos deputados da mesma UF, porque poucos gastos extremos distorciam a média ([ADR-0005, seção 9.5](adr/0005-modelagem-dimensional-granularidade-scd-ceap.md#95-mediana-no-lugar-da-média-como-referência-do-desvio)). Todas as métricas da camada semântica já usam a mediana.
+
 ---
 
 ### Números da Entrega (E4)
@@ -32,11 +34,11 @@ Medidos numa subida do zero em 24/11/2026.
 
 | Métrica | Valor na E3 | Valor na E4 | Impacto / Ganho |
 |:--|:--:|:--:|:--:|
-| **Lançamentos no fato** | 785.929 | **802.861** | A Câmara regera os CSVs; a reconciliação Bronze × fato continua obrigatória |
+| **Lançamentos** (Bronze na E3, fato na E4; a reconciliação garante que são iguais) | 785.929 | **802.861** | A Câmara regera os CSVs; a reconciliação Bronze × fato continua obrigatória |
 | **Onde a métrica é calculada** | Gold + 4 contas no `painel/app.py` | **Só no schema `semantico`** | Nenhuma soma, média ou agrupamento no painel |
 | **Métricas com definição versionada** | N/A | **32** em 5 views | Fórmula, unidade e grão no `_semantic.yml`; catálogo gerado dele |
 | **Números do painel conferidos contra a camada** | N/A | **12** (`verificar_consumo_duplo.py`) | Trocar a fonte do painel não mudou nenhum número |
-| **Testes no `dbt build`** | 42 | **48** | Inclui `assert_semantico_gasto_consistente` e `assert_semantico_desvio_consistente` (tolerância de R$ 0,01) |
+| **Testes no `dbt build`** | 42 | **48** | Inclui `assert_semantico_gasto_consistente` (tolerância de R$ 0,01) e `assert_semantico_desvio_consistente` (R$ 1, pelo arredondamento do rateio) |
 | **Leitura do painel (5 consultas)** | N/A | **217 ms** (mediana) · 251 ms (p90) | ~130 ms a mais que tabelas, sem cópia nem defasagem |
 | **Consumidores do dado** | 1 (painel) | **2** (painel + auditor) | Os dois mostram os mesmos 15 parlamentares |
 | **Publicação da fila do auditor** | N/A | **38 ms** por dia (mediana) | Idempotente: republicar os mesmos dados grava 0 linhas |

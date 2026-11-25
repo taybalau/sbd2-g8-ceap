@@ -68,16 +68,19 @@ nav:
       - "Documento técnico": E4_DISPONIBILIZACAO.md
       - "Camada semântica e ETL reverso": e4.md
       - "Análise de LGPD": lgpd.md
-      - "Release notes": release_notes_e4.md   
       - "Controle de acesso": controle-de-acesso.md
+      - "Release notes": release_notes_e4.md
 
   - Referência:
+      - "Catálogo de dados": catalogo.md
+      - "Linhagem": linhagem.md
       - "Dicionário de dados": dicionario-de-dados.md
       - "Testes de dados": testes.md
       - "Perguntas de gestão": consultas.md
 
   - Governança:
       - Decisões (ADR):
+          - "Portfólio e conferência dos gatilhos": adr/README.md
           - "ADR-0001 · Modelagem insert-only (E1)": adr/0001-modelagem-transacional-insert-only-ceap.md
           - "ADR-0002 · Ingestão e formato aberto (E2)": adr/0002-mecanismo-ingestao-e-formato-aberto.md
           - "ADR-0003 · Beneficiário final (E2)": adr/0003-resolucao-grafo-societario-beneficiario-final.md
@@ -98,6 +101,7 @@ nav:
           - "Semana 08": diario/semana-08.md
           - "Semana 09": diario/semana-09.md
           - "Semana 10": diario/semana-10.md
+          - "Retrospectiva (E1 a E4)": diario/retrospectiva.md
       - Uso de IA: ia.md
 
 
