@@ -1,6 +1,6 @@
 # E4 · Controle de acesso com privilégio mínimo
 
-A [migration 005](../migrations/005_controle_acesso.sql) atende à issue #10 por **recorte de colunas e view mascarada no PostgreSQL**, conforme os papéis da [análise de LGPD](lgpd.md#62-papéis).
+A [migration 005](https://github.com/taybalau/sbd2-g8-ceap/blob/main/migrations/005_controle_acesso.sql) atende à issue #10 por **recorte de colunas e view mascarada no PostgreSQL**, conforme os papéis da [análise de LGPD](lgpd.md#62-papéis).
 
 ## Papéis e recorte
 
