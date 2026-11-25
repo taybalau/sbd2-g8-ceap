@@ -24,6 +24,8 @@ A plataforma de dados foi construída para responder com precisão à seguinte p
 
 > **"Quais parlamentares e partidos da 57ª Legislatura (2023–2026) apresentam maior desvio de gastos acima da média mensal da Cota Parlamentar (CEAP), e quais categorias e fornecedores concentram esses recursos?"**
 
+Desde 19/11/2026, a "média mensal" é medida pela **mediana** do gasto mensal dos deputados da mesma UF, porque poucos gastos extremos distorciam a média ([ADR-0005, seção 9.5](docs/adr/0005-modelagem-dimensional-granularidade-scd-ceap.md)).
+
 Com o enriquecimento da **Entrega E2**, a pergunta ganha profundidade de auditoria societária:
 > *"Quais despesas da CEAP pagas a múltiplos CNPJs aparentemente concorrentes concentram recursos no mesmo Beneficiário Final (mesmo CPF ou grupo econômico controlador)?"*
 
@@ -60,7 +62,7 @@ Documento completo: [docs/e3.md](docs/e3.md) · ADRs [0004](docs/adr/0004-avalia
 
 - **Direct-to-Lakehouse:** CSV da Câmara → Bronze Delta (`ingestao/bronze.py`, partição por ano, idempotente) + histórico oficial de deputados via API (`ingestao/bronze_historico.py`).
 - **dbt (`dbt_ceap/`):** fato `fct_lancamento_ceap` com grão declarado (uma linha por lançamento publicado), `dim_parlamentar_scd` (SCD tipo 2 a partir do histórico oficial, porque o CSV regrava o partido atual) e marts Gold que respondem à pergunta de gestão.
-- **Testes de dados (42, no `dbt build`):** esquema (incluindo contratos que fixam colunas e tipos das tabelas de consumo), volume, unicidade, integridade referencial, distribuição e os testes de domínio: negativo fora de subcota de compensação, salto de série por subcota, subcota que some entre anos, ano faltando, reconciliação Bronze ↔ fato ↔ Gold e regressão do SCD com caso real. Lista completa em [docs/testes.md](docs/testes.md).
+- **Testes de dados (42 na E3; 48 com a camada semântica da E4, no `dbt build`):** esquema (incluindo contratos que fixam colunas e tipos das tabelas de consumo), volume, unicidade, integridade referencial, distribuição e os testes de domínio: negativo fora de subcota de compensação, salto de série por subcota, subcota que some entre anos, ano faltando, reconciliação Bronze ↔ fato ↔ Gold e regressão do SCD com caso real. Lista completa em [docs/testes.md](docs/testes.md).
 - **Dicionário de dados:** todas as tabelas da Bronze, Silver e Gold, com tipo e descrição de cada coluna, em [docs/dicionario-de-dados.md](docs/dicionario-de-dados.md) (gerado por `scripts/gerar_docs_e3.sh`).
 - **Dagster (`orquestracao/`):** retry com backoff, falha de fonte sem propagação e backfill por ano. Tudo isso é exercitado por `orquestracao/demo_falhas.py`.
 - **Painel (`painel/app.py`):** três blocos, um por parte da pergunta (Streamlit; justificativa no ADR-0007).
@@ -69,6 +71,17 @@ Documento completo: [docs/e3.md](docs/e3.md) · ADRs [0004](docs/adr/0004-avalia
 ```bash
 docker compose up --build   # E1/E2 + pipeline da E3 + Dagster (:3000) + painel (:8501)
 ```
+
+### 3.2 Arquitetura da Entrega E4: Camada Semântica, ETL Reverso e Governança
+
+Documento técnico: [docs/E4_DISPONIBILIZACAO.md](docs/E4_DISPONIBILIZACAO.md) · Release notes: [docs/release_notes_e4.md](docs/release_notes_e4.md) · Decisão: [ADR-0008](docs/adr/0008-disponibilizacao-camada-semantica-etl-reverso.md).
+
+- **Camada semântica de métricas (`dbt_ceap/models/semantic/`):** 5 views no schema `semantico`, com 32 métricas definidas uma vez (fórmula, unidade e grão no `_semantic.yml`) e contrato de esquema. O painel passou a ler só dela e não calcula mais nada. Testes no `dbt build` e um script conferem que a mesma métrica dá o mesmo número em todas as telas. Detalhes em [docs/e4.md](docs/e4.md).
+- **ETL reverso (`etl_reverso/`):** o top 15 do desvio é publicado todo dia, por push, na fila do auditor no PostgreSQL da E1 (schema `alerta`, migration 006), logo depois do dbt. Tabelas insert-only, autoria gravada pelo banco, 3 tentativas com o destino fora do ar e comparação medida com um CSV agendado.
+- **Análise de LGPD:** inventário de cada dado pessoal, com base legal, retenção, descarte e risco de reidentificação, em [docs/lgpd.md](docs/lgpd.md).
+- **Controle de acesso com privilégio mínimo (migration 005):** papéis `ceap_pipeline`, `ceap_auditor` e `ceap_consulta`, recorte de colunas e CPF mascarado para a consulta pública. O ETL reverso conecta com o usuário de serviço `ceap_etl_reverso`. Ver [docs/controle-de-acesso.md](docs/controle-de-acesso.md).
+- **Catálogo e linhagem:** as 39 tabelas da plataforma com dono e grão, em [docs/catalogo.md](docs/catalogo.md), e o caminho de cada número do painel até o CSV público, em [docs/linhagem.md](docs/linhagem.md).
+- **Portfólio de ADRs e retrospectiva:** conferência dos gatilhos dos ADRs 0001 a 0008 em [docs/adr/README.md](docs/adr/README.md) e o ciclo de vida do dado em [docs/diario/retrospectiva.md](docs/diario/retrospectiva.md).
 
 ---
 
@@ -90,7 +103,7 @@ docker compose up --build
 #### O que o comando executa automaticamente:
 1. Sobe o **PostgreSQL 16** com replicação lógica habilitada (`wal_level=logical`).
 2. Dispara o container de **ingestão**, que:
-   - Executa as migrações sequenciais em `migrations/` (`001` a `004`), criando tabelas, índices, publicação lógica de CDC e a view de gasto mensal da E3.
+   - Executa as migrações sequenciais em `migrations/` (`001` a `006`), criando tabelas, índices, publicação lógica de CDC, a view de gasto mensal da E3, os papéis de acesso da E4 (`005`) e a fila do auditor do ETL reverso (`006`).
    - Baixa (ou valida o cache local) dos CSVs oficiais da CEAP (2023 a 2026).
    - Realiza a carga transacional OLTP via `COPY` em tabela unlogged e normalização com integridade referencial.
    - Executa a **Ingestão em Lote para o Delta Lake** (`batch_ingest_lakehouse.py`).
@@ -102,9 +115,9 @@ docker compose up --build
      - Semântica de entrega e deduplicação;
      - Auditoria analítica de grupos econômicos e sócios UBO.
 3. Quando a ingestão termina, sobe a **E3**:
-   - `e3-pipeline`: Bronze Delta a partir dos CSVs, histórico de deputados pela API da Câmara e `dbt build` (Silver e Gold com todos os testes), mais o `dbt source freshness`. Termina com erro se algum passo falhar.
+   - `e3-pipeline`: Bronze Delta a partir dos CSVs, histórico de deputados pela API da Câmara e `dbt build` (Silver, Gold e a camada semântica da E4, com todos os testes), mais o `dbt source freshness`. No fim, o ETL reverso publica a fila do auditor no PostgreSQL. Termina com erro se algum passo falhar.
    - `e3-dagster` em http://localhost:3000: grafo, execuções, schedule diário e backfill por ano.
-   - `e3-painel` em http://localhost:8501: painel que responde à pergunta de gestão.
+   - `e3-painel` em http://localhost:8501: painel que responde à pergunta de gestão, lendo só a camada semântica.
 
 ---
 
@@ -132,12 +145,31 @@ print(con.execute('''
 
 ### 6. Documentos e Governança
 
-- **Documento Explicativo da Pipeline E2:** [docs/PIPELINE_E2.md](docs/PIPELINE_E2.md) — Detalhamento técnico de ponta a ponta dos dois caminhos, do enriquecimento societário e da garantia de semântica.
-- **ADR-0001 (Decisão Arquitetural OLTP):** [docs/adr/0001-modelagem-transacional-insert-only-ceap.md](docs/adr/0001-modelagem-transacional-insert-only-ceap.md) — Modelagem relacional insert-only e carimbos de tempo.
-- **ADR-0002 (Decisão Arquitetural E2 - Ingestão e Lakehouse):** [docs/adr/0002-mecanismo-ingestao-e-formato-aberto.md](docs/adr/0002-mecanismo-ingestao-e-formato-aberto.md) — CDC vs Recarga Periódica (Opção Nula), Delta Lake e Compressão Zstandard.
-- **ADR-0003 (Decisão Arquitetural E2 - Enriquecimento Societário):** [docs/adr/0003-resolucao-grafo-societario-beneficiario-final.md](docs/adr/0003-resolucao-grafo-societario-beneficiario-final.md) — Resolução em Grafo da Cadeia Societária e Beneficiário Final (UBO).
-- **Diários de Bordo da Squad G8:** [docs/diario/](docs/diario/) — Registros semanais detalhados:
-  - Semanas 01 a 05: Concepção, modelagem transacional e Entrega E1 (24/08 a 28/09/2026).
-  - Semanas 06 e 07: Ingestão em lote, CDC, enriquecimento QSA da Receita e Entrega E2 (29/09 a 13/10/2026).
-- **Política de IA:** [AI-USAGE.md](AI-USAGE.md) — Registro transparente do uso de inteligência artificial.
+📘 Todos os documentos também estão no site: https://taybalau.github.io/sbd2-g8-ceap/
 
+**Documentos por entrega**
+- **E1 · Fonte transacional:** [modelo de dados](docs/modelo-de-dados.md), [carga no OLTP](docs/pipeline.md) e [release notes](RELEASE_NOTES.md).
+- **E2 · Lakehouse:** [documento técnico](docs/PIPELINE_E2.md), [lakehouse e CDC](docs/lakehouse.md), [enriquecimento societário](docs/enriquecimento.md) e [release notes](docs/RELEASE_NOTES_E2.md).
+- **E3 · Modelo analítico:** [visão geral](docs/e3.md), [documento técnico](docs/E3_MODEL.md), [erros tratados](docs/e3-erros-tratados.md), [consulta otimizada (EXPLAIN)](docs/explain/README.md) e [release notes](docs/release_notes_e3.md).
+- **E4 · Disponibilização do dado:** [documento técnico](docs/E4_DISPONIBILIZACAO.md), [camada semântica e ETL reverso](docs/e4.md), [análise de LGPD](docs/lgpd.md), [controle de acesso](docs/controle-de-acesso.md) e [release notes](docs/release_notes_e4.md).
+
+**Referência**
+- [Catálogo de dados](docs/catalogo.md), [linhagem](docs/linhagem.md), [dicionário de dados](docs/dicionario-de-dados.md), [testes de dados](docs/testes.md) e [perguntas de gestão](docs/consultas.md).
+
+**Decisões de arquitetura (ADRs)** — [portfólio e conferência dos gatilhos](docs/adr/README.md)
+- [ADR-0001](docs/adr/0001-modelagem-transacional-insert-only-ceap.md) (E1): modelagem relacional insert-only e carimbos de tempo.
+- [ADR-0002](docs/adr/0002-mecanismo-ingestao-e-formato-aberto.md) (E2): CDC vs recarga periódica (opção nula), Delta Lake e Zstandard.
+- [ADR-0003](docs/adr/0003-resolucao-grafo-societario-beneficiario-final.md) (E2): cadeia societária em grafo e beneficiário final (UBO).
+- [ADR-0004](docs/adr/0004-avaliacao-etl-relacional-postgres-vs-lakehouse-direto.md) (E3): staging relacional vs lakehouse direto.
+- [ADR-0005](docs/adr/0005-modelagem-dimensional-granularidade-scd-ceap.md) (E3): modelagem dimensional, grão e SCD tipo 2 (com a troca da média pela mediana).
+- [ADR-0006](docs/adr/0006-orquestracao-falha-controlada-e-backfill.md) (E3): orquestração com falha controlada e backfill.
+- [ADR-0007](docs/adr/0007-ferramenta-do-painel-analitico.md) (E3): ferramenta do painel analítico.
+- [ADR-0008](docs/adr/0008-disponibilizacao-camada-semantica-etl-reverso.md) (E4): camada semântica, leitura do warehouse e ETL reverso.
+
+**Diário de bordo da Squad G8:** [docs/diario/](docs/diario/index.md)
+- Semanas 01 a 05: concepção, modelagem transacional e Entrega E1 (24/08 a 28/09/2026).
+- Semanas 06 e 07: ingestão em lote, CDC, enriquecimento QSA da Receita e Entrega E2 (29/09 a 13/10/2026).
+- Semanas 08 a 10: modelo analítico, testes, orquestração, painel e Entrega E3.
+- [Retrospectiva do ciclo de vida do dado (E1 a E4)](docs/diario/retrospectiva.md).
+
+**Política de IA:** [AI-USAGE.md](AI-USAGE.md) — registro transparente do uso de inteligência artificial.
