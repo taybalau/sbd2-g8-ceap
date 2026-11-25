@@ -41,48 +41,61 @@ theme:
     - toc.follow
 
 nav:
-  - Início: index.md
-  - Como executar: como-executar.md
-  - Plataforma:
+  - Início:
+      - Visão geral: index.md
+      - Como executar: como-executar.md
       - Arquitetura: arquitetura.md
-      - "E1 · Modelo de dados (OLTP)": modelo-de-dados.md
-      - "E1 · Carga no OLTP": pipeline.md
-      - "E2 · Lakehouse e CDC": lakehouse.md
-      - "E2 · Enriquecimento societário": enriquecimento.md
-      - "E3 · Estrela, testes, orquestração e painel": e3.md
-      - "E3 · Erros tratados": e3-erros-tratados.md
-      - "E3 · Consulta otimizada (EXPLAIN)": explain/README.md
-      - "E3 · Testes de dados": testes.md
-      - "E3 · Dicionário de dados": dicionario-de-dados.md
-      - Perguntas de gestão: consultas.md
+
+  - E1 · Fonte transacional:
+      - "Modelo de dados (OLTP)": modelo-de-dados.md
+      - "Carga no OLTP": pipeline.md
+      - "Release notes": release-notes.md
+
+  - E2 · Lakehouse:
+      - "Documento técnico": PIPELINE_E2.md
+      - "Lakehouse e CDC": lakehouse.md
+      - "Enriquecimento societário": enriquecimento.md
+      - "Release notes": RELEASE_NOTES_E2.md
+
+  - E3 · Modelo analítico:
+      - "Visão geral": e3.md
+      - "Documento técnico": E3_MODEL.md
+      - "Erros tratados": e3-erros-tratados.md
+      - "Consulta otimizada (EXPLAIN)": explain/README.md
+      - "Release notes": release_notes_e3.md
+
+  - E4 · Disponibilização do dado:
+      - "Camada semântica e ETL reverso": e4.md
+      - "Análise de LGPD": lgpd.md
+      # - "Release notes": release_notes_e4.md   # descomentar se o arquivo for criado (ajuste 6.3)
+
+  - Referência:
+      - "Dicionário de dados": dicionario-de-dados.md
+      - "Testes de dados": testes.md
+      - "Perguntas de gestão": consultas.md
+
   - Governança:
       - Decisões (ADR):
-          - "ADR-0001 — Modelagem insert-only": adr/0001-modelagem-transacional-insert-only-ceap.md
-          - "ADR-0002 — Ingestão e formato aberto": adr/0002-mecanismo-ingestao-e-formato-aberto.md
-          - "ADR-0003 — Beneficiário final (UBO)": adr/0003-resolucao-grafo-societario-beneficiario-final.md
-          - "ADR-0004 — Staging relacional vs Lakehouse direto": adr/0004-avaliacao-etl-relacional-postgres-vs-lakehouse-direto.md
-          - "ADR-0005 — Modelagem dimensional e SCD": adr/0005-modelagem-dimensional-granularidade-scd-ceap.md
-          - "ADR-0006 — Orquestração e falha controlada": adr/0006-orquestracao-falha-controlada-e-backfill.md
-          - "ADR-0007 — Ferramenta do painel": adr/0007-ferramenta-do-painel-analitico.md
-      - "Documento técnico da E2": PIPELINE_E2.md
-      - "Documento técnico da E3": E3_MODEL.md
+          - "ADR-0001 · Modelagem insert-only (E1)": adr/0001-modelagem-transacional-insert-only-ceap.md
+          - "ADR-0002 · Ingestão e formato aberto (E2)": adr/0002-mecanismo-ingestao-e-formato-aberto.md
+          - "ADR-0003 · Beneficiário final (E2)": adr/0003-resolucao-grafo-societario-beneficiario-final.md
+          - "ADR-0004 · Staging relacional vs Lakehouse direto (E2)": adr/0004-avaliacao-etl-relacional-postgres-vs-lakehouse-direto.md
+          - "ADR-0005 · Modelagem dimensional e SCD (E3)": adr/0005-modelagem-dimensional-granularidade-scd-ceap.md
+          - "ADR-0006 · Orquestração e falha controlada (E3)": adr/0006-orquestracao-falha-controlada-e-backfill.md
+          - "ADR-0007 · Ferramenta do painel (E3)": adr/0007-ferramenta-do-painel-analitico.md
       - Diário de bordo:
           - diario/index.md
-          - Semana 01: diario/semana-01.md
-          - Semana 02: diario/semana-02.md
-          - Semana 03: diario/semana-03.md
-          - Semana 04: diario/semana-04.md
-          - Semana 05: diario/semana-05.md
-          - Semana 06: diario/semana-06.md
-          - Semana 07: diario/semana-07.md
-          - Semana 08: diario/semana-08.md
-          - Semana 09: diario/semana-09.md
-          - Semana 10: diario/semana-10.md
-      - Uso de IA: ia.md
-  - "Release Notes (E1 e E2)": release-notes.md
-  - "Release Notes (E2)": RELEASE_NOTES_E2.md
-  - "Release Notes (E3)": release_notes_e3.md
-  - E4 - Análise de LGPD: lgpd.md
+          - "Semana 01": diario/semana-01.md
+          - "Semana 02": diario/semana-02.md
+          - "Semana 03": diario/semana-03.md
+          - "Semana 04": diario/semana-04.md
+          - "Semana 05": diario/semana-05.md
+          - "Semana 06": diario/semana-06.md
+          - "Semana 07": diario/semana-07.md
+          - "Semana 08": diario/semana-08.md
+          - "Semana 09": diario/semana-09.md
+          - "Semana 10": diario/semana-10.md
+      - "Uso de IA": ia.md
 
 
 markdown_extensions:
