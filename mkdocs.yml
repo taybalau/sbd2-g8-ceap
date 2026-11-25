@@ -65,9 +65,11 @@ nav:
       - "Release notes": release_notes_e3.md
 
   - E4 · Disponibilização do dado:
+      - "Documento técnico": E4_DISPONIBILIZACAO.md
       - "Camada semântica e ETL reverso": e4.md
       - "Análise de LGPD": lgpd.md
-      # - "Release notes": release_notes_e4.md   # descomentar se o arquivo for criado (ajuste 6.3)
+      - "Release notes": release_notes_e4.md   
+      - "Controle de acesso": controle-de-acesso.md
 
   - Referência:
       - "Dicionário de dados": dicionario-de-dados.md
@@ -83,6 +85,7 @@ nav:
           - "ADR-0005 · Modelagem dimensional e SCD (E3)": adr/0005-modelagem-dimensional-granularidade-scd-ceap.md
           - "ADR-0006 · Orquestração e falha controlada (E3)": adr/0006-orquestracao-falha-controlada-e-backfill.md
           - "ADR-0007 · Ferramenta do painel (E3)": adr/0007-ferramenta-do-painel-analitico.md
+          - "ADR-0008 · Camada semântica e ETL reverso (E4)": adr/0008-disponibilizacao-camada-semantica-etl-reverso.md
       - Diário de bordo:
           - diario/index.md
           - "Semana 01": diario/semana-01.md
