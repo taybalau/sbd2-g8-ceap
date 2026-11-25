@@ -8,7 +8,8 @@
 
 **1. O que essa plataforma permite decidir que antes não dava?**
 Quem o auditor investiga primeiro. Ele recebe todo dia uma fila com os 15 parlamentares mais acima do
-padrão da própria UF, vê a categoria e os fornecedores que explicam o desvio e registra a decisão.
+padrão da própria UF e registra nela a decisão sobre cada um. No painel, consulta as categorias e os
+fornecedores que explicam o desvio.
 Antes, só existiam CSVs anuais sem comparação justa entre estados.
 
 **2. Desvio alto quer dizer irregularidade?**

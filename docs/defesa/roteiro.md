@@ -34,7 +34,8 @@ do ensaio.
   CEAP, e em quais categorias e fornecedores esse dinheiro se concentra?*
 - **O que a plataforma permite decidir que antes não se decidia:** um auditor com tempo para olhar
   poucos casos sabe **quem investigar primeiro**. Recebe todo dia uma fila com os 15 parlamentares
-  mais acima do padrão da própria UF, com a categoria que explica o desvio, e registra o que decidiu.
+  mais acima do padrão da própria UF e registra nela o que decidiu. As categorias e os fornecedores
+  que explicam o desvio de cada um ficam no painel.
 - Antes: dados públicos espalhados em CSVs anuais, com o partido sobrescrito pelo atual e sem
   comparação justa entre estados (o teto da cota muda por UF).
 - **Desvio não é irregularidade:** é onde olhar primeiro.
