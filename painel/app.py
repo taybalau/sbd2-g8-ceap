@@ -397,20 +397,24 @@ st.markdown(
 # só formatação: por que a linha não tem link (a regra está na view: link_omitido_lgpd)
 lanc_tela = lanc.assign(
     url_documento=lambda x: x.url_documento.astype("string"),
-    obs=lambda x: [("pessoa física: sem link (LGPD)" if omitido else "" if publicado else "não publicado pela Câmara")
+    tipo_documento=lambda x: x.tipo_documento.replace({"nota fiscal eletrônica": "NF eletrônica"}),
+    obs=lambda x: [("pessoa física (LGPD)" if omitido else "" if publicado else "não publicado")
                    for omitido, publicado in zip(x.link_omitido_lgpd, x.tem_documento_publicado)])
 st.dataframe(
     lanc_tela[["posicao_valor", "data_emissao", "competencia", "nome_fornecedor", "documento_fornecedor",
                "tipo_documento", "valor_liquido", "url_documento", "obs"]],
     hide_index=True, use_container_width=True, height=36 * (len(lanc) + 1) + 3,
     column_config={
-        "posicao_valor": st.column_config.NumberColumn("#", format="%d"),
-        "data_emissao": st.column_config.DateColumn("Emissão", format="DD/MM/YYYY"),
-        "competencia": st.column_config.DateColumn("Competência", format="MM/YYYY"),
-        "nome_fornecedor": "Fornecedor", "documento_fornecedor": "CNPJ/CPF", "tipo_documento": "Tipo",
-        "valor_liquido": st.column_config.NumberColumn("Valor (R$)", format="%.2f"),
-        "url_documento": st.column_config.LinkColumn("Documento", display_text="abrir na Câmara"),
-        "obs": "Observação",
+        # larguras fixas (px): sem elas o Streamlit divide igual e corta "nota fiscal eletrônica"
+        "posicao_valor": st.column_config.NumberColumn("#", format="%d", width=35),
+        "data_emissao": st.column_config.DateColumn("Emissão", format="DD/MM/YYYY", width=85),
+        "competencia": st.column_config.DateColumn("Competência", format="MM/YYYY", width=85),
+        "nome_fornecedor": st.column_config.TextColumn("Fornecedor", width=310),
+        "documento_fornecedor": st.column_config.TextColumn("CNPJ/CPF", width=125),
+        "tipo_documento": st.column_config.TextColumn("Tipo", width=110),
+        "valor_liquido": st.column_config.NumberColumn("Valor (R$)", format="%.2f", width=80),
+        "url_documento": st.column_config.LinkColumn("Documento", display_text="abrir na Câmara", width=110),
+        "obs": st.column_config.TextColumn("Observação", width=140),
     })
 st.caption("Sem link: a Câmara não publicou o arquivo digitalizado, ou o fornecedor é pessoa física. Neste "
            "caso o link não é exibido porque o recibo traz o CPF completo; o lançamento continua identificado "
