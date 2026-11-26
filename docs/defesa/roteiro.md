@@ -46,10 +46,12 @@ do ensaio.
 
 - Fonte pública (CSV anual da Câmara e API de histórico dos deputados) → Bronze → Silver → Gold →
   camada semântica → painel e fila do auditor no PostgreSQL.
-- O [catálogo](../catalogo.md) tem as 39 tabelas da plataforma, com dono, origem e grão.
+- O [catálogo](../catalogo.md) tem as 43 tabelas da plataforma, com dono, origem e grão.
 - Exemplo seguido até a fonte: o **desvio acumulado** da barra do painel volta, coluna por coluna,
   até o `vlrLiquido` do CSV da Câmara ([linhagem, exemplo 1](../linhagem.md#exemplo-1-o-desvio-acumulado-do-painel-até-o-csv)).
-- **Para a gestão:** qualquer número do painel pode ser conferido até o documento público.
+- **Para a gestão:** qualquer número do painel pode ser conferido até o documento público. No
+  painel, os maiores lançamentos de cada categoria têm o link para a nota digitalizada no site da Câmara
+  ([linhagem, exemplo 3](../linhagem.md#exemplo-3-do-desvio-no-painel-até-o-documento-na-câmara)).
 
 ## 3. Como cada métrica é calculada (5:30–9:00) — Filipe *(sugestão)*
 
@@ -60,12 +62,13 @@ do ensaio.
 - **Mediana, e não média** ([ADR-0005, 9.5](../adr/0005-modelagem-dimensional-granularidade-scd-ceap.md#95-mediana-no-lugar-da-média-como-referência-do-desvio)):
   poucos meses extremos deslocavam a referência da UF inteira. O comparativo mostrou o ranking estável
   (14 de 15 mantidos), com mais mudança entre partidos.
-- **Partido da data do gasto** (SCD tipo 2): o CSV regrava o partido com o atual em 22% dos
-  lançamentos; sem isso, R$ 33 milhões iriam para o partido errado.
-- **Uma definição por métrica:** 32 métricas em 5 views da camada `semantico`, com fórmula, unidade e
+- **Partido da data do gasto** (SCD tipo 2): o CSV regrava o partido com o atual em 21% dos
+  lançamentos; sem isso, R$ 29 milhões iriam para o partido errado.
+- **Uma definição por métrica:** 50 métricas em 8 views da camada `semantico`, com fórmula, unidade e
   grão versionados. O painel não calcula nada.
 - **Mesmo número garantido por teste:** o gasto bate entre parlamentar, partido, categoria,
-  fornecedor e o fato (R$ 0,01); 48 testes no `dbt build`.
+  fornecedor, a série mensal, os lançamentos e o fato (R$ 0,01); 51 testes no `dbt build`, e o selo
+  do painel mostra o resultado do último build.
 
 ## 4. O resultado volta para quem age (9:00–11:30) — Taynara *(sugestão)*
 
@@ -85,7 +88,7 @@ do ensaio.
 
 Seguir [demo.md](demo.md). Quatro passos, cerca de 1 minuto cada:
 
-1. Painel: o líder do ranking e o partido do topo.
+1. Painel: o líder do ranking, a linha mês a mês dele e o documento do maior lançamento na Câmara.
 2. Fila do auditor: **os mesmos 15 nomes**, na mesma ordem, e o registro de uma decisão.
 3. Linhagem: o número do líder em cada camada até a Bronze.
 4. Recorte de acesso: o auditor vê o CPF; a consulta pública vê o dado mascarado; o resto é negado.
@@ -98,8 +101,12 @@ Se a demo falhar, usar o plano B de [demo.md](demo.md#plano-b) (evidências já 
 
 - [Análise de LGPD](../lgpd.md): inventário por titular (deputados, fornecedores pessoa física, sócios
   do QSA e passageiros), com base legal, retenção, descarte e risco de reidentificação.
-- **Achado mais grave, ainda aberto:** o painel mostra o **CPF completo** de 314 fornecedores pessoa
-  física. Disparou o gatilho do ADR-0007, e a decisão não foi revista.
+- **Achado mais grave, corrigido na tela:** o painel mostrava o **CPF completo** de 314 fornecedores
+  pessoa física. Agora mostra `***.456.789-**`, também quando o CPF vem dentro do nome (MEI), não
+  mostra o link do recibo de pessoa física (o PDF traz o CPF), e um teste barra o build se um CPF
+  completo aparecer na camada semântica.
+- **Ainda aberto:** o arquivo do lakehouse continua com o CPF completo. A separação em zona de consumo
+  não foi feita, e o gatilho do ADR-0007 (acesso por perfil) segue sem revisão.
 - **Já feito:** papéis com privilégio mínimo no PostgreSQL (migration 005) e o ETL reverso conectando
   com usuário de serviço, não com o superusuário.
 - **Para a gestão:** o risco é conhecido, medido e tem plano; não foi escondido.
@@ -113,7 +120,8 @@ Se a demo falhar, usar o plano B de [demo.md](demo.md#plano-b) (evidências já 
 - **A fonte não era estável:** o CSV é regerado e sobrescreve o partido.
 - **Os gatilhos de ADR quase não ajudaram:** só um disparou e ficou sem dono; o ADR-0008 já saiu com
   limiar, valor atual e ação.
-- Pendências: CPF no painel, zona de consumo separada e serviços da E1/E2 ainda como superusuário
+- Pendências: CPF completo no arquivo do lakehouse (zona de consumo separada) e serviços da E1/E2
+  ainda como superusuário
   ([retrospectiva](../diario/retrospectiva.md)).
 
 ---

@@ -12,7 +12,7 @@ A camada analítica tem quatro camadas (Bronze, Silver e Gold da E3; Semântica 
 | [Bronze](#bronze) | Cópia fiel dos dados públicos, em Delta Lake (`lakehouse/bronze/`), tudo como texto. | 2 |
 | [Silver](#silver) | Dados tipados, dimensões e o fato atômico (schema `silver` do `ceap.duckdb`). | 10 |
 | [Gold](#gold) | Tabelas analíticas com grão declarado (schema `gold` do `ceap.duckdb`). | 5 |
-| [Semântica](#semântica) | Camada semântica de métricas da E4 (views do schema `semantico`): a única fonte do painel e do ETL reverso. | 5 |
+| [Semântica](#semântica) | Camada semântica de métricas da E4 (views do schema `semantico`): a única fonte do painel e do ETL reverso. | 9 |
 
 Legenda: 🔒 contrato de esquema (`contract: enforced`): o build reprova se a coluna sumir ou mudar de tipo · 👤 dado pessoal (LGPD).
 
@@ -377,6 +377,21 @@ Rupturas de publicação CONHECIDAS e investigadas. Os testes de salto e de subc
 
 ## Semântica
 
+### `auditoria.resultado_build`
+
+Uma linha por `dbt build` ou `dbt test`, com a contagem dos testes por resultado. Criada no on-run-start e preenchida no on-run-end (macros/registra_build.sql).
+
+| Coluna | Tipo | Descrição |
+| :--- | :--- | :--- |
+| `invocation_id` | `VARCHAR` | Identificador da execução do dbt. |
+| `comando` | `VARCHAR` | Comando do dbt (build ou test). |
+| `executado_em` | `TIMESTAMP WITH TIME ZONE` | Fim da execução. |
+| `testes_total` | `INTEGER` | Testes executados. |
+| `testes_aprovados` | `INTEGER` | Testes aprovados. |
+| `testes_aviso` | `INTEGER` | Testes com severidade warn que acusaram algo. |
+| `testes_reprovados` | `INTEGER` | Testes reprovados ou com erro. |
+| `modelos_com_erro` | `INTEGER` | Modelos ou seeds que falharam. |
+
 ### `semantico.met_categoria_parlamentar` 🔒
 
 **Grão:** deputado × subcota. Métricas da categoria que gera o desvio (3ª parte da pergunta).
@@ -420,13 +435,35 @@ Rupturas de publicação CONHECIDAS e investigadas. Os testes de salto e de subc
 | :--- | :--- | :--- |
 | `id_deputado` | `INTEGER` | nuDeputadoId do deputado. |
 | `sk_fornecedor` | `VARCHAR` | Fornecedor (dim_fornecedor). |
-| `nome_fornecedor` | `VARCHAR` | Nome do fornecedor. |
-| `documento_fornecedor` 👤 | `VARCHAR` | CNPJ ou CPF do fornecedor. *(pode ser CPF de pessoa física (fornecedor))* |
+| `nome_fornecedor` 👤 | `VARCHAR` | Nome do fornecedor; CPF dentro do nome (razão social de MEI) mascarado. *(CPF de pessoa física mascarado: `***.456.789-**`)* |
+| `documento_fornecedor` 👤 | `VARCHAR` | CNPJ completo, ou CPF mascarado (***.456.789-**) para pessoa física (LGPD). *(CPF de pessoa física mascarado: `***.456.789-**`)* |
 | `gasto_fornecedor` | `DECIMAL(38,2)` | Gasto do deputado no fornecedor, na janela comparável. |
 | `participacao_no_deputado` | `DOUBLE` | Peso do fornecedor no gasto total do deputado. |
 | `qtd_lancamentos` | `BIGINT` | Lançamentos do deputado no fornecedor. |
 | `posicao_gasto` | `BIGINT` | Posição do fornecedor pelo gasto, dentro do deputado (1 = o maior). |
 | `participacao_acumulada` | `DOUBLE` | Quanto este fornecedor e os maiores que ele somam do gasto do deputado (na posição 10, os 10 maiores). |
+
+### `semantico.met_lancamento_parlamentar` 🔒
+
+**Grão:** um lançamento publicado, no recorte do ranking. Liga o desvio do painel ao documento na Câmara (3ª parte da pergunta, até a fonte). CPF de pessoa física mascarado; sem passageiro e sem trecho.
+
+| Coluna | Tipo | Descrição |
+| :--- | :--- | :--- |
+| `id_lancamento` | `VARCHAR` | Lançamento (fct_lancamento_ceap). |
+| `id_deputado` | `INTEGER` | nuDeputadoId do deputado. |
+| `num_subcota` | `INTEGER` | Código da subcota (categoria de despesa). |
+| `descricao_subcota` | `VARCHAR` | Descrição da subcota. |
+| `competencia` | `DATE` | Mês de competência. |
+| `data_emissao` | `DATE` | Data de emissão do documento (vazia em telefonia e bilhetes). |
+| `sk_fornecedor` | `VARCHAR` | Fornecedor (dim_fornecedor). |
+| `nome_fornecedor` 👤 | `VARCHAR` | Nome do fornecedor; CPF dentro do nome mascarado. *(CPF de pessoa física mascarado: `***.456.789-**`)* |
+| `documento_fornecedor` 👤 | `VARCHAR` | CNPJ completo, ou CPF mascarado (***.456.789-**). *(CPF de pessoa física mascarado: `***.456.789-**`)* |
+| `tipo_documento` | `VARCHAR` | Tipo do documento: nota fiscal, nota fiscal eletrônica, recibo, despesa no exterior ou outro. |
+| `valor_liquido` | `DECIMAL(14,2)` | Valor debitado da cota no lançamento (negativo em créditos). |
+| `url_documento` | `VARCHAR` | Link para o documento digitalizado no site da Câmara. Vazio quando a Câmara não publicou ou quando o fornecedor é pessoa física (o documento traz o CPF completo). |
+| `tem_documento_publicado` | `BOOLEAN` | Verdadeiro se a Câmara publicou o link do documento (mesmo que ele não seja exibido). |
+| `link_omitido_lgpd` | `BOOLEAN` | Verdadeiro se a Câmara publicou o documento, mas o link não é exibido porque o fornecedor é pessoa física. |
+| `posicao_valor` | `BIGINT` | Posição do lançamento pelo valor, dentro do deputado e da subcota (1 = o maior). |
 
 ### `semantico.met_parlamentar` 🔒
 
@@ -448,10 +485,29 @@ Rupturas de publicação CONHECIDAS e investigadas. Os testes de salto e de subc
 | `desvio_acumulado` | `DECIMAL(38,4)` | Quanto o deputado gastou acima da mediana da UF, somado mês a mês. É a medida do ranking. |
 | `desvio_relativo` | `DOUBLE` | Desvio acumulado em proporção da referência (0,33 = 33% acima da mediana da UF). |
 | `meses_acima_mediana` | `BIGINT` | Meses em que o gasto do deputado passou da mediana da UF. |
+| `proporcao_meses_acima` | `DOUBLE` | Fração dos meses com gasto em que o deputado ficou acima da mediana da UF. Perto de 1, o desvio é constante; baixa com desvio alto, ele vem de poucos meses fora da curva. |
 | `z_medio` | `DOUBLE` | O quanto o deputado foge do padrão da UF, independentemente do tamanho da UF. |
 | `hhi_fornecedores` | `DOUBLE` | Concentração do gasto em fornecedores (0 a 1; perto de 1 = poucos fornecedores). |
 | `posicao_ranking` | `BIGINT` | Posição pelo desvio acumulado (1 = maior desvio). |
 | `em_alerta` | `BOOLEAN` | Verdadeiro para o topo do ranking (var alerta_top_n = 15). É o top 15 do painel e o que o ETL reverso publica na fila de auditoria. |
+
+### `semantico.met_parlamentar_mes` 🔒
+
+**Grão:** deputado × competência comparável. Série mensal do parlamentar contra a mediana da UF: mostra se o desvio é constante ou vem de poucos meses (1ª parte da pergunta, no tempo).
+
+| Coluna | Tipo | Descrição |
+| :--- | :--- | :--- |
+| `id_deputado` | `INTEGER` | nuDeputadoId do deputado. |
+| `competencia` | `DATE` | Mês de competência (primeiro dia). |
+| `sigla_uf` | `VARCHAR` | UF do deputado no mês. |
+| `partidos_no_mes` | `VARCHAR` | Partido no mês, pela data do gasto; dois em mês de troca (ex.: PATRIOTA → PRD). |
+| `gasto_mes` | `DECIMAL(38,2)` | Gasto líquido do deputado no mês. |
+| `mediana_uf_mes` | `DECIMAL(18,4)` | Mediana do gasto mensal dos deputados da mesma UF com gasto no mês. |
+| `qtd_deputados_uf_mes` | `BIGINT` | Deputados da UF com gasto no mês (base da mediana). |
+| `desvio_mes` | `DECIMAL(38,4)` | Quanto o deputado gastou acima (ou abaixo) da mediana da UF no mês. Somado, dá desvio_acumulado. |
+| `z_mes` | `DOUBLE` | Desvio do mês em z robusto, comparável entre UFs. |
+| `acima_mediana` | `BOOLEAN` | Verdadeiro se o gasto do mês passou da mediana da UF. |
+| `trocou_de_partido_no_mes` | `BOOLEAN` | Verdadeiro no mês em que o partido muda (dentro do mês ou em relação ao mês anterior com gasto). |
 
 ### `semantico.met_partido` 🔒
 
@@ -469,3 +525,18 @@ Rupturas de publicação CONHECIDAS e investigadas. Os testes de salto e de subc
 | `posicao_ranking` | `BIGINT` | Posição pelo desvio por deputado-mês entre os partidos que entram no ranking (nulo para os demais). |
 | `gasto_total_se_sobrescrito` | `DECIMAL(38,2)` | Gasto que o partido teria se todo o histórico do deputado fosse do partido atual (SCD tipo 1). |
 | `erro_gasto_se_sobrescrito` | `DECIMAL(38,2)` | Erro que o SCD tipo 2 evita no partido. |
+
+### `semantico.met_qualidade_build` 🔒
+
+**Grão:** uma linha, o build mais recente. Resultado dos testes do dbt que produziu os dados em consumo; é o selo de qualidade do painel.
+
+| Coluna | Tipo | Descrição |
+| :--- | :--- | :--- |
+| `executado_em` | `TIMESTAMP WITH TIME ZONE` | Fim do build. |
+| `comando` | `VARCHAR` | Comando do dbt (build ou test). |
+| `testes_total` | `INTEGER` | Testes executados no build. |
+| `testes_aprovados` | `INTEGER` | Testes aprovados. |
+| `testes_aviso` | `INTEGER` | Testes com severidade warn que acusaram algo (não barram o build). |
+| `testes_reprovados` | `INTEGER` | Testes reprovados ou com erro. |
+| `modelos_com_erro` | `INTEGER` | Modelos ou seeds que falharam no build. |
+| `build_sem_falhas` | `BOOLEAN` | Verdadeiro se nenhum teste reprovou e nenhum modelo falhou. |

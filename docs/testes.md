@@ -3,13 +3,13 @@
 > Página gerada por `scripts/gerar_doc_testes.py` a partir do `manifest.json` e do
 > `run_results.json` do dbt. Não edite à mão: rode o script depois de um `dbt build`.
 
-**Última execução:** 24/11/2026 15:06 UTC, numa subida do zero (`docker compose up --build`) com os CSVs da Câmara baixados no mesmo dia.
+**Última execução:** 26/11/2026 13:42 UTC, numa subida do zero (`docker compose up --build`) com os CSVs da Câmara baixados no mesmo dia.
 
 | Resultado | Testes |
 | :--- | ---: |
 | ⚠️ aviso | 3 |
-| ✅ passou | 45 |
-| **Total** | **48** |
+| ✅ passou | 48 |
+| **Total** | **51** |
 
 ## Cobertura do checklist da E3 e da E4
 
@@ -17,13 +17,14 @@
 | :--- | ---: | :--- |
 | [Esquema](#esquema) | 8 | colunas obrigatórias preenchidas; o contrato das tabelas de consumo (abaixo) fixa colunas e tipos |
 | [Volume](#volume) | 5 | nenhuma linha perdida ou duplicada entre Bronze, fato e Gold; nenhum ano ou mês faltando |
-| [Unicidade](#unicidade) | 18 | o grão declarado de cada modelo vale (uma linha por chave) |
+| [Unicidade](#unicidade) | 20 | o grão declarado de cada modelo vale (uma linha por chave) |
 | [Integridade referencial](#integridade-referencial) | 4 | toda chave do fato aponta para uma linha existente da dimensão |
 | [Distribuição](#distribuição) | 3 | o total e cada subcota não saltam fora da faixa calibrada com os dados reais (erro silencioso) |
 | [Domínio (dado sujo)](#domínio-dado-sujo) | 4 | valor negativo onde não cabe, subcota ou deputado que some, sobrescrita da fonte |
 | [SCD tipo 2](#scd-tipo-2) | 3 | o partido usado é o da data do gasto, sem buracos nem sobreposição de versões |
 | [Freshness e SLA](#freshness-e-sla) | 1 | a Gold não é publicada sobre uma Bronze mais velha que o SLA de 26 h |
 | [Consumo duplo (E4)](#consumo-duplo-e4) | 2 | a mesma métrica dá o mesmo número em todas as visões da camada semântica (o painel lê só dela; scripts/verificar_consumo_duplo.py confere a tela) |
+| [Privacidade (LGPD)](#privacidade-lgpd) | 1 | o CPF de fornecedor pessoa física não chega completo ao consumo (docs/lgpd.md, L1 e L10) |
 
 ### Contratos de esquema
 
@@ -42,8 +43,11 @@ de nome ou mudar de tipo em relação ao declarado. As colunas e os tipos estão
 | `semantico.met_categoria_parlamentar` | 7 |
 | `semantico.met_contexto` | 14 |
 | `semantico.met_fornecedor_parlamentar` | 9 |
-| `semantico.met_parlamentar` | 18 |
+| `semantico.met_lancamento_parlamentar` | 15 |
+| `semantico.met_parlamentar` | 19 |
+| `semantico.met_parlamentar_mes` | 11 |
 | `semantico.met_partido` | 10 |
+| `semantico.met_qualidade_build` | 8 |
 
 Contrato violado de propósito em `mart_desvio_parlamentar` (2026-11-17): primeiro declarando
 um tipo errado, depois tirando uma coluna do SQL. Nos dois casos a tabela não é criada:
@@ -97,7 +101,9 @@ This model has an enforced contract that failed.
 | `grao_unico` | `mart_freshness_gold` | uma linha por (`tabela_consumo`) | erro | ✅ passou |
 | `grao_unico` | `met_categoria_parlamentar` | uma linha por (`id_deputado`, `num_subcota`) | erro | ✅ passou |
 | `grao_unico` | `met_fornecedor_parlamentar` | uma linha por (`id_deputado`, `sk_fornecedor`) | erro | ✅ passou |
+| `grao_unico` | `met_lancamento_parlamentar` | uma linha por (`id_lancamento`) | erro | ✅ passou |
 | `grao_unico` | `met_parlamentar` | uma linha por (`id_deputado`) | erro | ✅ passou |
+| `grao_unico` | `met_parlamentar_mes` | uma linha por (`id_deputado`, `competencia`) | erro | ✅ passou |
 | `grao_unico` | `met_partido` | uma linha por (`sigla_partido`) | erro | ✅ passou |
 | `unique` | `regra_subcota` | `num_subcota` não se repete | erro | ✅ passou |
 
@@ -123,8 +129,8 @@ This model has an enforced contract that failed.
 | Teste | Tabela | O que verifica | Severidade | Última execução |
 | :--- | :--- | :--- | :--- | :--- |
 | `assert_negativo_somente_em_subcota_de_compensacao` (singular) | `dim_categoria_despesa`, `fct_lancamento_ceap` | valor negativo só nas subcotas de compensação (40, 996, 998, 999) | erro | ✅ passou |
-| `assert_divergencia_csv_vs_historico` (singular) | `dim_parlamentar_scd`, `fct_lancamento_ceap` | mede quantos lançamentos têm no CSV um partido diferente do vigente na data do gasto | aviso | ⚠️ aviso (173475 linhas) |
-| `assert_deputado_ativo_nao_some_no_meio` (singular) | `fct_lancamento_ceap` | deputado sem gasto por 3+ meses no meio do mandato (lista para conferência) | aviso | ⚠️ aviso (143 linhas) |
+| `assert_divergencia_csv_vs_historico` (singular) | `dim_parlamentar_scd`, `fct_lancamento_ceap` | mede quantos lançamentos têm no CSV um partido diferente do vigente na data do gasto | aviso | ⚠️ aviso (134948 linhas) |
+| `assert_deputado_ativo_nao_some_no_meio` (singular) | `fct_lancamento_ceap` | deputado sem gasto por 3+ meses no meio do mandato (lista para conferência) | aviso | ⚠️ aviso (145 linhas) |
 | `assert_subcota_nao_some_entre_anos` (singular) | `fct_lancamento_ceap`, `ruptura_publicacao` | subcota com 100+ lançamentos num ano não desaparece no ano seguinte | erro | ✅ passou |
 
 ## SCD tipo 2
@@ -145,15 +151,21 @@ This model has an enforced contract that failed.
 
 | Teste | Tabela | O que verifica | Severidade | Última execução |
 | :--- | :--- | :--- | :--- | :--- |
-| `assert_semantico_gasto_consistente` (singular) | `fct_lancamento_ceap`, `met_categoria_parlamentar`, `met_fornecedor_parlamentar`, `met_parlamentar`, `met_partido` | o gasto total é o mesmo número por parlamentar, por partido, por categoria, por fornecedor e no fato | erro | ✅ passou |
-| `assert_semantico_desvio_consistente` (singular) | `met_contexto`, `met_parlamentar`, `met_partido` | o desvio por partido bate com o por parlamentar, e o erro da sobrescrita do contexto bate com o dos partidos | erro | ✅ passou |
+| `assert_semantico_gasto_consistente` (singular) | `fct_lancamento_ceap`, `met_categoria_parlamentar`, `met_fornecedor_parlamentar`, `met_lancamento_parlamentar`, `met_parlamentar`, `met_parlamentar_mes`, `met_partido` | o gasto total é o mesmo número por parlamentar, por partido, por categoria, por fornecedor, mês a mês, lançamento a lançamento e no fato | erro | ✅ passou |
+| `assert_semantico_desvio_consistente` (singular) | `met_contexto`, `met_parlamentar`, `met_parlamentar_mes`, `met_partido` | o desvio por partido bate com o por parlamentar, a série mensal de cada deputado soma o desvio acumulado dele, e o erro da sobrescrita do contexto bate com o dos partidos | erro | ✅ passou |
+
+## Privacidade (LGPD)
+
+| Teste | Tabela | O que verifica | Severidade | Última execução |
+| :--- | :--- | :--- | :--- | :--- |
+| `assert_semantico_sem_cpf_completo` (singular) | `met_fornecedor_parlamentar`, `met_lancamento_parlamentar` | nenhuma view da camada semântica entrega CPF completo de fornecedor pessoa física (documento, nome de MEI ou link do recibo) | erro | ✅ passou |
 
 ## Freshness das fontes (`dbt source freshness`)
 
 | Fonte | Carregada em (UTC) | Idade | Limites | Resultado |
 | :--- | :--- | ---: | :--- | :--- |
-| `bronze.camara_deputado_historico` | 2026-11-24 14:58 | 0.0 h | aviso 7 dias · erro 30 dias | ✅ passou |
-| `bronze.ceap_lancamento` | 2026-11-24 14:56 | 0.0 h | aviso 26 h · erro 48 h | ✅ passou |
+| `bronze.camara_deputado_historico` | 2026-11-26 13:40 | 0.0 h | aviso 7 dias · erro 30 dias | ✅ passou |
+| `bronze.ceap_lancamento` | 2026-11-26 13:40 | 0.0 h | aviso 26 h · erro 48 h | ✅ passou |
 
 ## Outros testes da plataforma
 

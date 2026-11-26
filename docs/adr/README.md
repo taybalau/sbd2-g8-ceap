@@ -134,9 +134,37 @@ o recorte dos dados resolveu a condição, ou abrir um ADR que o substitua.
 
 Este caso vai para a retrospectiva da E4 no diário de bordo (issue #12).
 
+**Atualização de 26/11/2026.** A primeira metade da condição foi tratada na exibição: o painel lê a
+camada semântica, que agora entrega o CPF mascarado (`***.456.789-**`), e um teste barra o build se
+um CPF completo voltar. A segunda metade continua: o painel monta o lakehouse inteiro, e o arquivo
+ainda tem o CPF completo na Gold. Sem a zona de consumo, o gatilho segue disparado e a decisão segue
+sem revisão.
+
 ### ADR-0008 · Disponibilização do dado
 
 ADR novo da E4. Os gatilhos estão na [seção 6 do ADR](0008-disponibilizacao-camada-semantica-etl-reverso.md#6-gatilho-de-revisão).
+
+## Reconferência de 26/11/2026: o painel depois da E4
+
+O painel ganhou visões e a camada semântica ganhou 3 views ([E4, seção 1.6](../e4.md#16-depois-da-entrega-o-painel-mostra-o-levantamento)).
+Dois gatilhos mudaram de valor:
+
+| ADR | Gatilho | Limiar | Na E4 | Hoje | Disparou? |
+| :--- | :--- | ---: | ---: | ---: | :---: |
+| 0007 | Número de visões do painel | mais de 8 | 3 | **3 blocos, ou 11 gráficos e tabelas** | depende da unidade |
+| 0008 | Métricas na camada semântica | mais de 50 | 32 | **50** | não, mas está no limite |
+| 0008 | Leitura do painel pela camada semântica (p90) | mais de 1 s | 251 ms | 254 ms (7 views; [evidência](../evidencias/painel_leitura_semantica.json)) | não |
+
+**ADR-0007, visões.** O ADR chama de visões os três blocos fixos (parlamentares, partidos e
+concentração) e diz que o gatilho existe porque, acima de 8, "o código ficaria mais caro de manter do
+que a configuração". Por bloco, continuam 3. Por gráfico ou tabela, são 11: barras do ranking, tabela
+dos 15 em alerta, dispersão "constante ou pontual", barras de partidos, tabela do erro da sobrescrita,
+linha mês a mês, posição na UF, barras de categorias, fornecedores, lançamentos e a tabela completa do
+ranking. O código do painel passou de 193 para 420 linhas. O ADR não define a unidade, e a decisão de
+considerar o gatilho disparado ou não é da Squad. Até lá, fica registrado aqui com os dois valores.
+
+**ADR-0008, métricas.** A próxima métrica passa do limiar e obriga a prototipar o dbt Semantic Layer
+(alternativa 2.1-D do ADR).
 
 ## Como reconferir
 

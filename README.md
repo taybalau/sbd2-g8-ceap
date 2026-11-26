@@ -62,10 +62,10 @@ Documento completo: [docs/e3.md](docs/e3.md) · ADRs [0004](docs/adr/0004-avalia
 
 - **Direct-to-Lakehouse:** CSV da Câmara → Bronze Delta (`ingestao/bronze.py`, partição por ano, idempotente) + histórico oficial de deputados via API (`ingestao/bronze_historico.py`).
 - **dbt (`dbt_ceap/`):** fato `fct_lancamento_ceap` com grão declarado (uma linha por lançamento publicado), `dim_parlamentar_scd` (SCD tipo 2 a partir do histórico oficial, porque o CSV regrava o partido atual) e marts Gold que respondem à pergunta de gestão.
-- **Testes de dados (42 na E3; 48 com a camada semântica da E4, no `dbt build`):** esquema (incluindo contratos que fixam colunas e tipos das tabelas de consumo), volume, unicidade, integridade referencial, distribuição e os testes de domínio: negativo fora de subcota de compensação, salto de série por subcota, subcota que some entre anos, ano faltando, reconciliação Bronze ↔ fato ↔ Gold e regressão do SCD com caso real. Lista completa em [docs/testes.md](docs/testes.md).
+- **Testes de dados (42 na E3; 48 com a camada semântica da E4; 51 hoje, no `dbt build`):** esquema (incluindo contratos que fixam colunas e tipos das tabelas de consumo), volume, unicidade, integridade referencial, distribuição e os testes de domínio: negativo fora de subcota de compensação, salto de série por subcota, subcota que some entre anos, ano faltando, reconciliação Bronze ↔ fato ↔ Gold e regressão do SCD com caso real. Lista completa em [docs/testes.md](docs/testes.md).
 - **Dicionário de dados:** todas as tabelas da Bronze, Silver e Gold, com tipo e descrição de cada coluna, em [docs/dicionario-de-dados.md](docs/dicionario-de-dados.md) (gerado por `scripts/gerar_docs_e3.sh`).
 - **Dagster (`orquestracao/`):** retry com backoff, falha de fonte sem propagação e backfill por ano. Tudo isso é exercitado por `orquestracao/demo_falhas.py`.
-- **Painel (`painel/app.py`):** três blocos, um por parte da pergunta (Streamlit; justificativa no ADR-0007).
+- **Painel (`painel/app.py`):** três blocos, um por parte da pergunta (Streamlit; justificativa no ADR-0007). Depois da E4 passou a mostrar **quem** gasta acima (ranking com meses acima da mediana, z robusto e concentração em fornecedores), **quando** (linha mês a mês contra a mediana da UF) e **com que prova** (os maiores lançamentos com o link do documento na Câmara), com selo dos testes do último build, filtros por UF e partido e download em CSV. Ver [docs/e4.md, seção 1.6](docs/e4.md#16-depois-da-entrega-o-painel-mostra-o-levantamento).
 - **Freshness e SLA:** Gold publicada até 26 h após a ingestão (`gold.mart_freshness_gold`, teste `assert_gold_dentro_do_sla`).
 
 ```bash
@@ -76,11 +76,11 @@ docker compose up --build   # E1/E2 + pipeline da E3 + Dagster (:3000) + painel 
 
 Documento técnico: [docs/E4_DISPONIBILIZACAO.md](docs/E4_DISPONIBILIZACAO.md) · Release notes: [docs/release_notes_e4.md](docs/release_notes_e4.md) · Decisão: [ADR-0008](docs/adr/0008-disponibilizacao-camada-semantica-etl-reverso.md).
 
-- **Camada semântica de métricas (`dbt_ceap/models/semantic/`):** 5 views no schema `semantico`, com 32 métricas definidas uma vez (fórmula, unidade e grão no `_semantic.yml`) e contrato de esquema. O painel passou a ler só dela e não calcula mais nada. Testes no `dbt build` e um script conferem que a mesma métrica dá o mesmo número em todas as telas. Detalhes em [docs/e4.md](docs/e4.md).
+- **Camada semântica de métricas (`dbt_ceap/models/semantic/`):** 5 views e 32 métricas no schema `semantico` na entrega (hoje 8 views e 50 métricas, com o CPF de pessoa física mascarado), cada métrica definida uma vez (fórmula, unidade e grão no `_semantic.yml`) e contrato de esquema. O painel passou a ler só dela e não calcula mais nada. Testes no `dbt build` e um script conferem que a mesma métrica dá o mesmo número em todas as telas. Detalhes em [docs/e4.md](docs/e4.md).
 - **ETL reverso (`etl_reverso/`):** o top 15 do desvio é publicado todo dia, por push, na fila do auditor no PostgreSQL da E1 (schema `alerta`, migration 006), logo depois do dbt. Tabelas insert-only, autoria gravada pelo banco, 3 tentativas com o destino fora do ar e comparação medida com um CSV agendado.
 - **Análise de LGPD:** inventário de cada dado pessoal, com base legal, retenção, descarte e risco de reidentificação, em [docs/lgpd.md](docs/lgpd.md).
 - **Controle de acesso com privilégio mínimo (migration 005):** papéis `ceap_pipeline`, `ceap_auditor` e `ceap_consulta`, recorte de colunas e CPF mascarado para a consulta pública. O ETL reverso conecta com o usuário de serviço `ceap_etl_reverso`. Ver [docs/controle-de-acesso.md](docs/controle-de-acesso.md).
-- **Catálogo e linhagem:** as 39 tabelas da plataforma com dono e grão, em [docs/catalogo.md](docs/catalogo.md), e o caminho de cada número do painel até o CSV público, em [docs/linhagem.md](docs/linhagem.md).
+- **Catálogo e linhagem:** as 43 tabelas da plataforma com dono e grão, em [docs/catalogo.md](docs/catalogo.md), e o caminho de cada número do painel até o CSV público, em [docs/linhagem.md](docs/linhagem.md).
 - **Portfólio de ADRs e retrospectiva:** conferência dos gatilhos dos ADRs 0001 a 0008 em [docs/adr/README.md](docs/adr/README.md) e o ciclo de vida do dado em [docs/diario/retrospectiva.md](docs/diario/retrospectiva.md).
 
 ---

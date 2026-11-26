@@ -36,18 +36,28 @@ Deixar abertos:
 - uma aba no site, na [linhagem, exemplo 1](https://taybalau.github.io/sbd2-g8-ceap/linhagem/#exemplo-1-o-desvio-acumulado-do-painel-até-o-csv);
 - um terminal na raiz do repositório, com fonte grande.
 
-> Os números abaixo são da subida de 25/11/2026. A Câmara regera os CSVs, então conferir no dia
-> e ajustar a fala se mudarem. O que não pode mudar é o **mesmo número nas duas telas**.
+> Os números abaixo são da subida de 26/11/2026. A Câmara regera os CSVs (no dia 26 o líder mudou de
+> Pompeo de Mattos para Zé Trovão), então conferir no dia e ajustar a fala se mudarem. O que não pode
+> mudar é o **mesmo número nas duas telas**.
 
-## Passo 1 — Painel: quem lidera (1 min)
+## Passo 1 — Painel: quem lidera e a prova (1 min)
 
 No painel, bloco 1 ("Parlamentares com maior desvio acima da mediana"):
 
-- **Pompeo de Mattos (PDT-RS)** lidera: R$ 55.868/mês contra R$ 41.829 da mediana da UF (+34%),
-  acumulando **R$ 421.160** acima da mediana.
-- No bloco 2, **PRD** tem o maior desvio por deputado-mês (R$ 3.763).
+- O selo verde no topo: **51 testes de dados** no último build, nenhum reprovado.
+- **Zé Trovão (PL-SC)** lidera: R$ 43.188/mês contra R$ 26.902 da mediana da UF (+61%), acumulando
+  **R$ 488.566** acima da mediana.
+- No bloco 2, **PSC** tem o maior desvio por deputado-mês (R$ 4.632), e o destaque mostra os
+  **R$ 29.028.199** que iriam para o partido errado sem o SCD tipo 2.
+- No bloco 3, com o líder selecionado: a linha mês a mês mostra **30 de 30 meses** acima da mediana
+  (desvio constante, não um pico). Nos maiores lançamentos, o primeiro é um **recibo de pessoa física**
+  (R$ 9.000, CPF mascarado) e aparece **sem link**: o recibo traz o CPF completo (LGPD).
+- Trocar o parlamentar para **Pompeo de Mattos (PDT-RS)**, 3º: em Divulgação da atividade parlamentar,
+  clicar em **abrir na Câmara** no primeiro lançamento. Abre a nota da **NOVOGRAF** de **R$ 46.500**
+  (09/08/2024).
 
-**Fala:** "O painel não calcula nada: lê a camada semântica. Agora o mesmo número em outro sistema."
+**Fala:** "O painel não calcula nada: lê a camada semântica, e cada lançamento de empresa leva ao
+documento publicado pela Câmara. Agora o mesmo número em outro sistema."
 
 ## Passo 2 — Fila do auditor: os mesmos 15 (1 min)
 
@@ -58,7 +68,7 @@ docker compose exec -T db psql -U postgres -d ceap_oltp -c \
    from alerta.vw_fila_auditoria"
 ```
 
-**Esperado:** 15 linhas, de Pompeo de Mattos (R$ 421.160,38) a Adail Filho, **na mesma ordem do
+**Esperado:** 15 linhas, de Zé Trovão (R$ 488.565,96) a Juliana Cardoso, **na mesma ordem do
 painel**, todas `pendente`.
 
 Registrar uma decisão como auditor e mostrar que ela não pode ser alterada (tudo desfeito no fim):
@@ -97,7 +107,7 @@ print('soma mês a mês (gold mensal)', q(f'''select round(sum(desvio_deputado_m
 "
 ```
 
-**Esperado:** o mesmo valor (421.160,38) nas três linhas. **Fala:** "Daqui até o `vlrLiquido` do CSV
+**Esperado:** o mesmo valor (488.565,96) nas três linhas. **Fala:** "Daqui até o `vlrLiquido` do CSV
 da Câmara, cada passo está na página de linhagem."
 
 ## Passo 4 — Recorte de acesso (1 min)
