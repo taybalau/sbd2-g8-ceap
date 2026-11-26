@@ -36,6 +36,7 @@ CATEGORIA_SINGULAR = {
     "assert_gold_dentro_do_sla": "Freshness e SLA",
     "assert_semantico_gasto_consistente": "Consumo duplo (E4)",
     "assert_semantico_desvio_consistente": "Consumo duplo (E4)",
+    "assert_semantico_sem_cpf_completo": "Privacidade (LGPD)",
 }
 # O que cada teste singular verifica, em uma frase (o detalhe fica no comentário do .sql).
 DESCRICAO_SINGULAR = {
@@ -55,13 +56,15 @@ DESCRICAO_SINGULAR = {
     "assert_scd_preserva_partido_da_epoca": "cada lançamento aponta para a versão vigente na data do gasto, e não para a atual",
     "assert_scd_caso_conhecido_204494": "regressão com caso real: o deputado 204494 é PATRIOTA até 07/02/2024 e PRD depois",
     "assert_gold_dentro_do_sla": "a Gold foi construída até 26 h depois da ingestão mais recente",
-    "assert_semantico_gasto_consistente": "o gasto total é o mesmo número por parlamentar, por partido, por categoria, por fornecedor e no fato",
-    "assert_semantico_desvio_consistente": "o desvio por partido bate com o por parlamentar, e o erro da sobrescrita do contexto bate com o dos partidos",
+    "assert_semantico_gasto_consistente": "o gasto total é o mesmo número por parlamentar, por partido, por categoria, por fornecedor, mês a mês, lançamento a lançamento e no fato",
+    "assert_semantico_desvio_consistente": "o desvio por partido bate com o por parlamentar, a série mensal de cada deputado soma o desvio acumulado dele, e o erro da sobrescrita do contexto bate com o dos partidos",
+    "assert_semantico_sem_cpf_completo": "nenhuma view da camada semântica entrega CPF completo de fornecedor pessoa física (documento, nome de MEI ou link do recibo)",
 }
 CATEGORIA_GENERICO = {"not_null": "Esquema", "unique": "Unicidade", "grao_unico": "Unicidade",
                       "relationships": "Integridade referencial"}
 ORDEM = ["Esquema", "Volume", "Unicidade", "Integridade referencial", "Distribuição",
-         "Domínio (dado sujo)", "SCD tipo 2", "Freshness e SLA", "Consumo duplo (E4)"]
+         "Domínio (dado sujo)", "SCD tipo 2", "Freshness e SLA", "Consumo duplo (E4)",
+         "Privacidade (LGPD)"]
 STATUS = {"pass": "✅ passou", "fail": "❌ reprovou", "warn": "⚠️ aviso", "error": "❌ erro",
           "skipped": "⏭️ pulado", "runtime error": "❌ erro"}
 
@@ -174,6 +177,7 @@ def main():
         "Freshness e SLA": "a Gold não é publicada sobre uma Bronze mais velha que o SLA de 26 h",
         "Consumo duplo (E4)": "a mesma métrica dá o mesmo número em todas as visões da camada semântica "
                               "(o painel lê só dela; scripts/verificar_consumo_duplo.py confere a tela)",
+        "Privacidade (LGPD)": "o CPF de fornecedor pessoa física não chega completo ao consumo (docs/lgpd.md, L1 e L10)",
     }
     for c in ORDEM:
         if c in por_categoria:

@@ -26,7 +26,7 @@ principais.
 | [Bronze](#bronze) | `lakehouse/bronze/` (Delta) | 2 | Bronze e orquestração | **sim** |
 | [Silver](#silver) | `lakehouse/ceap.duckdb`, schema `silver` | 10 | Modelagem dbt | **sim** |
 | [Gold](#gold) | `lakehouse/ceap.duckdb`, schema `gold` | 5 | Modelagem dbt | **sim** |
-| [Semântica](#semântica) | `lakehouse/ceap.duckdb`, schema `semantico` | 5 | Camada semântica | **sim** |
+| [Semântica](#semântica) | `lakehouse/ceap.duckdb`, schemas `semantico` e `auditoria` | 9 | Camada semântica | **sim** |
 | [Destino do ETL reverso](#destino-do-etl-reverso-postgresql-schema-alerta) | PostgreSQL `ceap_oltp`, schema `alerta` | 4 | ETL reverso / Auditor | — (é consumo) |
 
 !!! warning "O OLTP não fica no caminho do painel"
@@ -278,11 +278,15 @@ unidade de cada métrica no [catálogo de métricas](e4.md#12-catálogo-de-métr
 
 | View | Descrição | Origem | Grão | Quem consome |
 | :--- | :--- | :--- | :--- | :--- |
-| `met_parlamentar` 🔒 | Ranking de desvio por deputado e a regra de alerta (`em_alerta` = top 15) | `gold.mart_desvio_parlamentar` | deputado | painel (bloco 1 e seletor do bloco 3), ETL reverso |
+| `met_parlamentar` 🔒 | Ranking de desvio por deputado, a regra de alerta (`em_alerta` = top 15) e a fração de meses acima da mediana | `gold.mart_desvio_parlamentar` | deputado | painel (bloco 1, filtros e seletor do bloco 3), ETL reverso |
+| `met_parlamentar_mes` 🔒 | Série mensal do parlamentar contra a mediana da UF, com a troca de partido marcada | `gold.fct_gasto_mensal_parlamentar`, `silver.dim_parlamentar_scd` | deputado × competência | painel (bloco 3, linha mês a mês) |
 | `met_partido` 🔒 | Ranking de partidos com o corte de 5 deputados | `gold.mart_desvio_partido` | partido | painel (bloco 2) |
 | `met_categoria_parlamentar` 🔒 | Categoria que explica o desvio | `gold.mart_concentracao_parlamentar` | deputado × subcota | painel (bloco 3) |
-| `met_fornecedor_parlamentar` 🔒 | Concentração em fornecedores | `gold.mart_concentracao_parlamentar` | deputado × fornecedor | painel (bloco 3) |
-| `met_contexto` 🔒 | Janela comparável, freshness lida na hora, ruptura e erro total da sobrescrita | `gold.fct_gasto_mensal_parlamentar`, `gold.mart_desvio_partido`, `gold.mart_freshness_gold`, `silver.fct_lancamento_ceap`, seed `ruptura_publicacao` | uma linha | painel (cabeçalho), ETL reverso (`atualizado_em`, janela) |
+| `met_fornecedor_parlamentar` 🔒 | Concentração em fornecedores. CPF de pessoa física mascarado no documento e no nome | `gold.mart_concentracao_parlamentar` | deputado × fornecedor | painel (blocos 1 e 3) |
+| `met_lancamento_parlamentar` 🔒 | Lançamentos com o link do documento na Câmara (`url_documento`). CPF mascarado; sem link para documento de pessoa física (o recibo traz o CPF), sem passageiro e sem trecho | `silver.fct_lancamento_ceap`, `silver.dim_fornecedor`, `silver.dim_categoria_despesa` | lançamento | painel (bloco 3, maiores lançamentos), sempre filtrada por deputado e subcota |
+| `met_contexto` 🔒 | Janela comparável, freshness lida na hora, ruptura e erro total da sobrescrita | `gold.fct_gasto_mensal_parlamentar`, `gold.mart_desvio_partido`, `gold.mart_freshness_gold`, `silver.fct_lancamento_ceap`, seed `ruptura_publicacao` | uma linha | painel (cabeçalho e bloco 2), ETL reverso (`atualizado_em`, janela) |
+| `met_qualidade_build` 🔒 | Resultado dos testes do build mais recente: o selo de qualidade | `auditoria.resultado_build` | uma linha | painel (selo no cabeçalho) |
+| `auditoria.resultado_build` (tabela de controle) | Uma linha por `dbt build` ou `dbt test`, com os testes por resultado. Criada no `on-run-start` e preenchida no `on-run-end` (`dbt_ceap/macros/registra_build.sql`); fonte `auditoria` no dbt | o próprio dbt (`results`) | execução do dbt | `met_qualidade_build` |
 
 ## Destino do ETL reverso (PostgreSQL, schema `alerta`)
 
@@ -301,7 +305,7 @@ Criado por `migrations/006_etl_reverso.sql` no mesmo banco `ceap_oltp` da E1. Ta
 
 | Consumidor | Lê | Não lê | Código |
 | :--- | :--- | :--- | :--- |
-| Painel Streamlit (`:8501`) | só `semantico.*` (5 views) | Gold, Silver, Bronze, OLTP | `painel/app.py` |
+| Painel Streamlit (`:8501`) | só `semantico.*` (8 views; `met_lancamento_parlamentar` filtrada por deputado e subcota) | Gold, Silver, Bronze, OLTP | `painel/app.py` |
 | ETL reverso | `semantico.met_parlamentar`, `semantico.met_contexto` | Gold, Silver | `etl_reverso/publicar_alertas.py` |
 | Auditor | `alerta.vw_fila_auditoria`; escreve em `alerta.tratamento` | lakehouse | `etl_reverso/exemplo_auditor.sql` |
 | Consultas de auditoria societária (E2) | `delta/despesa_ceap`, `delta/dim_quadro_societario_ubo` | camadas da E3 | `scripts/consulta_caminho_societario.py` |

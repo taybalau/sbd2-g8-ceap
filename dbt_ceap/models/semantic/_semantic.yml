@@ -5,6 +5,24 @@ version: 2
 # grão e dimensões no meta do modelo. O painel (painel/app.py) e o ETL reverso leem só o schema
 # `semantico` e não recalculam nada. docs/e4.md é gerado a partir deste arquivo.
 
+sources:
+- name: auditoria
+  description: Tabelas de controle gravadas pelo próprio dbt, fora do grafo de modelos.
+  tables:
+  - name: resultado_build
+    description: >-
+      Uma linha por `dbt build` ou `dbt test`, com a contagem dos testes por resultado. Criada no
+      on-run-start e preenchida no on-run-end (macros/registra_build.sql).
+    columns:
+    - {name: invocation_id, description: Identificador da execução do dbt.}
+    - {name: comando, description: Comando do dbt (build ou test).}
+    - {name: executado_em, description: Fim da execução.}
+    - {name: testes_total, description: Testes executados.}
+    - {name: testes_aprovados, description: Testes aprovados.}
+    - {name: testes_aviso, description: Testes com severidade warn que acusaram algo.}
+    - {name: testes_reprovados, description: Testes reprovados ou com erro.}
+    - {name: modelos_com_erro, description: Modelos ou seeds que falharam.}
+
 models:
 - name: met_parlamentar
   description: >-
@@ -13,7 +31,7 @@ models:
   meta:
     grao: deputado (id_deputado)
     dimensoes: [deputado, UF, partido atual, trajetória partidária]
-    consumidores: [painel — bloco 1 e seletor do bloco 3, "ETL reverso: fila alerta.desvio_parlamentar no PostgreSQL"]
+    consumidores: [painel — bloco 1, filtros e seletor do bloco 3, "ETL reverso: fila alerta.desvio_parlamentar no PostgreSQL"]
   config:
     contract: {enforced: true}
   tests:
@@ -54,6 +72,12 @@ models:
     data_type: bigint
     description: Meses em que o gasto do deputado passou da mediana da UF.
     meta: {metrica: true, unidade: meses, formula: "count(meses com gasto > mediana da UF)"}
+  - name: proporcao_meses_acima
+    data_type: double
+    description: >-
+      Fração dos meses com gasto em que o deputado ficou acima da mediana da UF. Perto de 1, o desvio é
+      constante; baixa com desvio alto, ele vem de poucos meses fora da curva.
+    meta: {metrica: true, unidade: proporção, formula: "meses_acima_mediana ÷ meses_com_gasto"}
   - name: z_medio
     data_type: double
     description: O quanto o deputado foge do padrão da UF, independentemente do tamanho da UF.
@@ -171,8 +195,8 @@ models:
   columns:
   - {name: id_deputado, data_type: integer, description: nuDeputadoId do deputado.}
   - {name: sk_fornecedor, data_type: varchar, description: Fornecedor (dim_fornecedor).}
-  - {name: nome_fornecedor, data_type: varchar, description: Nome do fornecedor.}
-  - {name: documento_fornecedor, data_type: varchar, description: CNPJ ou CPF do fornecedor.}
+  - {name: nome_fornecedor, data_type: varchar, description: 'Nome do fornecedor; CPF dentro do nome (razão social de MEI) mascarado.'}
+  - {name: documento_fornecedor, data_type: varchar, description: 'CNPJ completo, ou CPF mascarado (***.456.789-**) para pessoa física (LGPD).'}
   - name: gasto_fornecedor
     data_type: decimal(38,2)
     description: Gasto do deputado no fornecedor, na janela comparável.
@@ -228,3 +252,128 @@ models:
   - {name: ruptura_inicio, data_type: date, description: Primeira competência afetada pela ruptura.}
   - {name: ruptura_descricao, data_type: varchar, description: O que mudou na publicação.}
   - {name: ruptura_evidencia, data_type: varchar, description: Evidência medida da ruptura.}
+
+- name: met_parlamentar_mes
+  description: >-
+    **Grão:** deputado × competência comparável. Série mensal do parlamentar contra a mediana da UF:
+    mostra se o desvio é constante ou vem de poucos meses (1ª parte da pergunta, no tempo).
+  meta:
+    grao: deputado × competência (id_deputado, competencia)
+    dimensoes: [deputado, competência, UF, partido no mês]
+    consumidores: [painel — bloco 3, linha mensal do parlamentar]
+  config:
+    contract: {enforced: true}
+  tests:
+  - grao_unico: {colunas: [id_deputado, competencia]}
+  columns:
+  - {name: id_deputado, data_type: integer, description: nuDeputadoId do deputado.}
+  - {name: competencia, data_type: date, description: Mês de competência (primeiro dia).}
+  - {name: sigla_uf, data_type: varchar, description: UF do deputado no mês.}
+  - {name: partidos_no_mes, data_type: varchar, description: 'Partido no mês, pela data do gasto; dois em mês de troca (ex.: PATRIOTA → PRD).'}
+  - name: gasto_mes
+    data_type: decimal(38,2)
+    description: Gasto líquido do deputado no mês.
+    meta: {metrica: true, unidade: R$, formula: "sum(valor_liquido) do deputado na competência"}
+  - name: mediana_uf_mes
+    data_type: decimal(18,4)
+    description: Mediana do gasto mensal dos deputados da mesma UF com gasto no mês.
+    meta: {metrica: true, unidade: R$, formula: "median(gasto do mês dos deputados da UF)"}
+  - name: qtd_deputados_uf_mes
+    data_type: bigint
+    description: Deputados da UF com gasto no mês (base da mediana).
+    meta: {metrica: true, unidade: deputados, formula: "count(deputados da UF com gasto na competência)"}
+  - name: desvio_mes
+    data_type: decimal(38,4)
+    description: Quanto o deputado gastou acima (ou abaixo) da mediana da UF no mês. Somado, dá desvio_acumulado.
+    meta: {metrica: true, unidade: R$, formula: "gasto_mes − mediana_uf_mes"}
+  - name: z_mes
+    data_type: double
+    description: Desvio do mês em z robusto, comparável entre UFs.
+    meta: {metrica: true, unidade: z robusto, formula: "(gasto_mes − mediana_uf_mes) ÷ (1,4826 × MAD da UF no mês)"}
+  - name: acima_mediana
+    data_type: boolean
+    description: Verdadeiro se o gasto do mês passou da mediana da UF.
+    meta: {metrica: true, unidade: regra, formula: "desvio_mes > 0"}
+  - name: trocou_de_partido_no_mes
+    data_type: boolean
+    description: Verdadeiro no mês em que o partido muda (dentro do mês ou em relação ao mês anterior com gasto).
+    meta: {metrica: true, unidade: regra, formula: "partido no início do mês ≠ partido no fim, ou ≠ partido do mês anterior"}
+
+- name: met_lancamento_parlamentar
+  description: >-
+    **Grão:** um lançamento publicado, no recorte do ranking. Liga o desvio do painel ao documento na
+    Câmara (3ª parte da pergunta, até a fonte). CPF de pessoa física mascarado; sem passageiro e sem trecho.
+  meta:
+    grao: lançamento (id_lancamento)
+    dimensoes: [deputado, categoria de despesa (subcota), competência, fornecedor]
+    consumidores: [painel — bloco 3, maiores lançamentos com link para o documento]
+  config:
+    contract: {enforced: true}
+  tests:
+  - grao_unico: {colunas: [id_lancamento]}
+  columns:
+  - {name: id_lancamento, data_type: varchar, description: Lançamento (fct_lancamento_ceap).}
+  - {name: id_deputado, data_type: integer, description: nuDeputadoId do deputado.}
+  - {name: num_subcota, data_type: integer, description: Código da subcota (categoria de despesa).}
+  - {name: descricao_subcota, data_type: varchar, description: Descrição da subcota.}
+  - {name: competencia, data_type: date, description: Mês de competência.}
+  - {name: data_emissao, data_type: date, description: Data de emissão do documento (vazia em telefonia e bilhetes).}
+  - {name: sk_fornecedor, data_type: varchar, description: Fornecedor (dim_fornecedor).}
+  - {name: nome_fornecedor, data_type: varchar, description: Nome do fornecedor; CPF dentro do nome mascarado.}
+  - {name: documento_fornecedor, data_type: varchar, description: 'CNPJ completo, ou CPF mascarado (***.456.789-**).'}
+  - {name: tipo_documento, data_type: varchar, description: 'Tipo do documento: nota fiscal, nota fiscal eletrônica, recibo, despesa no exterior ou outro.'}
+  - name: valor_liquido
+    data_type: decimal(14,2)
+    description: Valor debitado da cota no lançamento (negativo em créditos).
+    meta: {metrica: true, unidade: R$, formula: "vlrLiquido do CSV da Câmara"}
+  - {name: url_documento, data_type: varchar, description: 'Link para o documento digitalizado no site da Câmara. Vazio quando a Câmara não publicou ou quando o fornecedor é pessoa física (o documento traz o CPF completo).'}
+  - name: tem_documento_publicado
+    data_type: boolean
+    description: Verdadeiro se a Câmara publicou o link do documento (mesmo que ele não seja exibido).
+    meta: {metrica: true, unidade: regra, formula: "urlDocumento do CSV não vazio"}
+  - name: link_omitido_lgpd
+    data_type: boolean
+    description: Verdadeiro se a Câmara publicou o documento, mas o link não é exibido porque o fornecedor é pessoa física.
+    meta: {metrica: true, unidade: regra, formula: "documento publicado e fornecedor com CPF (11 dígitos)"}
+  - name: posicao_valor
+    data_type: bigint
+    description: Posição do lançamento pelo valor, dentro do deputado e da subcota (1 = o maior).
+    meta: {metrica: true, unidade: posição, formula: "row_number() por valor_liquido decrescente, por deputado × subcota"}
+
+- name: met_qualidade_build
+  description: >-
+    **Grão:** uma linha, o build mais recente. Resultado dos testes do dbt que produziu os dados em
+    consumo; é o selo de qualidade do painel.
+  meta:
+    grao: uma linha (build mais recente)
+    dimensoes: []
+    consumidores: [painel — selo de qualidade no cabeçalho]
+  config:
+    contract: {enforced: true}
+  columns:
+  - {name: executado_em, data_type: timestamp with time zone, description: Fim do build.}
+  - {name: comando, data_type: varchar, description: Comando do dbt (build ou test).}
+  - name: testes_total
+    data_type: integer
+    description: Testes executados no build.
+    meta: {metrica: true, unidade: testes, formula: "count(testes executados)"}
+  - name: testes_aprovados
+    data_type: integer
+    description: Testes aprovados.
+    meta: {metrica: true, unidade: testes, formula: "count(status = pass)"}
+  - name: testes_aviso
+    data_type: integer
+    description: Testes com severidade warn que acusaram algo (não barram o build).
+    meta: {metrica: true, unidade: testes, formula: "count(status = warn)"}
+  - name: testes_reprovados
+    data_type: integer
+    description: Testes reprovados ou com erro.
+    meta: {metrica: true, unidade: testes, formula: "count(status in (fail, error))"}
+  - name: modelos_com_erro
+    data_type: integer
+    description: Modelos ou seeds que falharam no build.
+    meta: {metrica: true, unidade: modelos, formula: "count(modelos e seeds com status error)"}
+  - name: build_sem_falhas
+    data_type: boolean
+    description: Verdadeiro se nenhum teste reprovou e nenhum modelo falhou.
+    meta: {metrica: true, unidade: regra, formula: "testes_reprovados = 0 e modelos_com_erro = 0"}

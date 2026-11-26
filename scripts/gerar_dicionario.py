@@ -51,6 +51,15 @@ def main():
 
     tabelas = {"Bronze": [], "Silver": [], "Gold": [], "Semântica": []}
     for s in manifest["sources"].values():
+        if s["source_name"] == "auditoria":  # tabela de controle gravada pelo próprio dbt (selo do painel)
+            tabelas["Semântica"].append({
+                "nome": f"auditoria.{s['name']}", "descricao": s.get("description"), "grao": None,
+                "colunas": s.get("columns", {}), "contrato": False,
+                "tipos": dict(con.execute(
+                    "select column_name, data_type from information_schema.columns "
+                    "where table_schema = 'auditoria' and table_name = ? order by ordinal_position",
+                    [s["name"]]).fetchall())})
+            continue
         tabelas["Bronze"].append({
             "nome": f"bronze/{s['name']}", "descricao": s.get("description"), "grao": None,
             "colunas": s.get("columns", {}), "contrato": False,
@@ -101,6 +110,8 @@ def main():
                     desc = "—"
                 marca = " 👤" if col in PESSOAL else ""
                 obs = f" *({PESSOAL[col]})*" if col in PESSOAL else ""
+                if camada == "Semântica" and col in ("documento_fornecedor", "nome_fornecedor"):
+                    marca, obs = " 👤", " *(CPF de pessoa física mascarado: `***.456.789-**`)*"
                 out.append(f"| `{col}`{marca} | `{tipo}` | {' '.join(desc.split())}{obs} |")
             out.append("")
 

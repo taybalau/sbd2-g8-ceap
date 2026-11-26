@@ -46,6 +46,13 @@ nav:
       - Como executar: como-executar.md
       - Arquitetura: arquitetura.md
 
+  - Entregáveis:
+      - "Visão geral e avaliação": entregaveis/index.md
+      - "E1 · Fonte transacional": entregaveis/e1.md
+      - "E2 · Ingestão e CDC": entregaveis/e2.md
+      - "E3 · Modelo analítico": entregaveis/e3.md
+      - "E4 · Disponibilização": entregaveis/e4.md
+
   - E1 · Fonte transacional:
       - "Modelo de dados (OLTP)": modelo-de-dados.md
       - "Carga no OLTP": pipeline.md
@@ -101,6 +108,9 @@ nav:
           - "Semana 08": diario/semana-08.md
           - "Semana 09": diario/semana-09.md
           - "Semana 10": diario/semana-10.md
+          - "Semana 11": diario/semana-11.md
+          - "Semana 12": diario/semana-12.md
+          - "Semana 13": diario/semana-13.md
           - "Retrospectiva (E1 a E4)": diario/retrospectiva.md
       - Uso de IA: ia.md
 

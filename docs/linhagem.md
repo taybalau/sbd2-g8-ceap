@@ -22,6 +22,7 @@ flowchart LR
         csv["CSV da CEAP<br/>camara.leg.br/cotas/Ano-AAAA.csv.zip"]
         api["API da Câmara<br/>GET /deputados/{id}/historico"]
         qsa["QSA da Receita<br/>(base de demonstração no código)"]
+        doc["Documento digitalizado<br/>camara.leg.br/cota-parlamentar/documentos"]
     end
 
     cache[("base-dados/Ano-AAAA.csv<br/>cache local")]
@@ -56,7 +57,8 @@ flowchart LR
         marts[("mart_desvio_parlamentar<br/>mart_desvio_partido<br/>mart_concentracao_parlamentar<br/>mart_freshness_gold")]
     end
 
-    sem[("semantico<br/>5 views met_*")]
+    rb[("auditoria.resultado_build<br/>testes de cada build")]
+    sem[("semantico<br/>8 views met_*")]
     painel["Painel Streamlit<br/>:8501"]
     etl["ETL reverso<br/>publicar_alertas.py"]
 
@@ -81,12 +83,15 @@ flowchart LR
     fct --> mensal --> marts
     fct --> marts
     mensal & marts --> sem
+    fct & scd & dims --> sem
+    gold -. "on-run-end do dbt build" .-> rb --> sem
     sem --> painel
+    painel -. "link url_documento" .-> doc
     sem --> etl --> fila --> vw --> aud
     aud -- "registra a decisão" --> trat --> vw
 
     classDef consumo stroke:#eb6834,stroke-width:3px
-    class csv,api,cache,bl,bh,stgl,stge,scd,dims,seeds,fct,mensal,marts,sem,painel,etl,fila,vw consumo
+    class csv,api,doc,cache,bl,bh,stgl,stge,scd,dims,seeds,fct,mensal,marts,rb,sem,painel,etl,fila,vw consumo
 ```
 
 !!! warning "Por que o OLTP não está entre a fonte e a Bronze"
@@ -116,8 +121,10 @@ flowchart LR
 | 6 | API da Câmara → `bronze/camara_deputado_historico` | `ingestao/bronze_historico.py`, asset `bronze/camara_deputado_historico` | Job `transformacao` (disparado pelo sensor após cada ingestão bem-sucedida) | Um registro por evento, texto; nada é gravado se mais de 1% das chamadas falhar | `dbt source freshness` |
 | 7 | Bronze → Silver | `dbt build` (staging, intermediate, core) | Job `transformacao` | Tipagem; SCD tipo 2 a partir da API; dimensões; fato atômico com flags de janela | `assert_fato_reconcilia_com_bronze` (mesma contagem e mesma soma); testes de SCD e de domínio ([lista](testes.md)) |
 | 8 | Silver → Gold | `dbt build` (gestao) | Job `transformacao` | Agregação mensal, mediana da UF, rankings, concentração | `assert_gold_reconcilia_com_fato`, `assert_desvio_alocado_reconcilia`, contratos 🔒 |
-| 9 | Gold → `semantico` | `dbt build` (semantic), views | Job `transformacao`; as views são lidas na hora | Regras de negócio (top 15, mínimo de 5 deputados), rótulos, idade dos dados | `assert_semantico_gasto_consistente`, `assert_semantico_desvio_consistente`, `grao_unico`, contratos 🔒 |
-| 10 | `semantico` → Painel | Leitura `read_only` em `painel/app.py` (cache de 5 min) | Ao abrir o painel | Nenhuma conta: só ordena, escolhe e formata | `scripts/verificar_consumo_duplo.py` |
+| 9 | Gold e Silver → `semantico` | `dbt build` (semantic), views. A série mensal sai da Gold; os lançamentos com o link do documento saem do fato da Silver | Job `transformacao`; as views são lidas na hora | Regras de negócio (top 15, mínimo de 5 deputados), rótulos, idade dos dados; CPF de pessoa física mascarado (`mascara_cpf`) | `assert_semantico_gasto_consistente`, `assert_semantico_desvio_consistente`, `assert_semantico_sem_cpf_completo`, `grao_unico`, contratos 🔒 |
+| 9a | Resultado dos testes → `auditoria.resultado_build` → `semantico.met_qualidade_build` | Hooks `on-run-start` e `on-run-end` do dbt (`macros/registra_build.sql`) | No fim de cada `dbt build` | Contagem dos testes por resultado | O selo do painel; `scripts/verificar_consumo_duplo.py` |
+| 10 | `semantico` → Painel | Leitura `read_only` em `painel/app.py` (cache de 5 min); os lançamentos são lidos só para o parlamentar e a categoria escolhidos | Ao abrir o painel e a cada seleção | Nenhuma conta: só filtra, ordena, escolhe e formata | `scripts/verificar_consumo_duplo.py` |
+| 10a | Painel → documento na Câmara | Link `url_documento` publicado no próprio CSV | Quando alguém clica | Nada: é o endereço publicado pela Câmara | [Exemplo 3](#exemplo-3-do-desvio-no-painel-até-o-documento-na-câmara) |
 | 11 | `semantico` → `alerta.desvio_parlamentar` | `etl_reverso/publicar_alertas.py`, asset `alerta/desvio_parlamentar_postgres` | No fim do job `transformacao` (push diário), 3 tentativas | Só o top 15 (`em_alerta`); `desvio_acumulado` arredondado a 2 casas; um retrato por `referencia_dados` | Asset check `alerta_igual_a_camada_semantica` |
 | 12 | `alerta` → Auditor | `alerta.vw_fila_auditoria` | Quando o auditor abre a fila | Junta o retrato mais recente com a última decisão | `etl_reverso/exemplo_auditor.sql` |
 
@@ -283,6 +290,30 @@ O `sgPartido` do CSV continua disponível como `fct_lancamento_ceap.sigla_partid
 auditoria. O teste `assert_divergencia_csv_vs_historico` mede a diferença entre as duas fontes, e
 `mart_desvio_partido.erro_gasto_se_sobrescrito` mostra o erro que se cometeria usando o CSV.
 
+## Exemplo 3: do desvio no painel até o documento na Câmara
+
+O painel fecha a linhagem do exemplo 1 com o documento: no bloco 3, para o parlamentar e a categoria
+escolhidos, ele lista os maiores lançamentos com o link do documento digitalizado no site da Câmara.
+
+| Passo | Tabela | Coluna | O que acontece |
+| :---: | :--- | :--- | :--- |
+| 0 | Painel, bloco 3 | "abrir na Câmara" | Mostra o link; vazio quando a Câmara não publicou o documento ou quando o fornecedor é pessoa física |
+| 1 | `semantico.met_lancamento_parlamentar` | `url_documento`, `valor_liquido`, `posicao_valor` | Mesmo recorte do ranking (57ª, sem lideranças, competências comparáveis); ordena por valor dentro de deputado × subcota; mascara o CPF e omite o link de pessoa física (o recibo traz o CPF completo) |
+| 2 | `silver.fct_lancamento_ceap` | `url_documento`, `valor_liquido` | Repassa; um lançamento por linha |
+| 3 | `silver.stg_ceap__lancamento` | `url_documento` | `nullif(urlDocumento, '')` |
+| 4 | `bronze/ceap_lancamento` | `urlDocumento` | Cópia em texto do CSV |
+| 5 | Fonte pública | `urlDocumento` | Endereço `camara.leg.br/cota-parlamentar/documentos/publ/...` publicado pela Câmara no CSV |
+
+A soma dos `valor_liquido` de `met_lancamento_parlamentar` é o mesmo gasto de todas as outras views
+(`assert_semantico_gasto_consistente`), e a série mensal (`met_parlamentar_mes`) soma o desvio
+acumulado de cada parlamentar (`assert_semantico_desvio_consistente`). Assim, o caminho da barra do
+ranking até o documento não perde nenhum real no meio.
+
+**Cobertura do link:** com os CSVs baixados em 26/11/2026, a Câmara publicou o documento de 94% dos
+lançamentos da janela comparável: 100% das notas eletrônicas e dos recibos e 87% das notas em papel
+(tipo 0). Dos que têm link, 4.676 (cerca de 1%) são de pessoa física e ficam sem link no painel (LGPD).
+Sem o link, o lançamento continua conferível pelo fornecedor, pela data e pelo valor.
+
 ## dbt docs: o que cobre e o que não cobre
 
 O `dbt docs` desenha a linhagem dos modelos do dbt a partir das descrições dos arquivos `.yml`.
@@ -324,3 +355,4 @@ localmente.
 | Duas cópias analíticas convivem (Delta E2 e Bronze E3) | Totais calculados no Delta da E2 podem divergir dos do painel (tipos, linhas descartadas, exclusões não propagadas) | [Arquitetura, limitação 10](arquitetura.md#limitações-conhecidas) |
 | O partido do OLTP e do Delta E2 vem do `sgPartido` do CSV | Agrupar por partido nesses ramos repete a sobrescrita da Câmara | [ADR-0005](adr/0005-modelagem-dimensional-granularidade-scd-ceap.md) |
 | Seeds mudam a janela dos rankings | Um número do painel pode mudar sem mudança na fonte | `dbt_ceap/seeds/ruptura_publicacao.csv` |
+| A Câmara não publica o documento de todo lançamento, e o painel omite o de pessoa física | Cerca de 7% dos lançamentos da janela ficam sem link para o documento digitalizado | [Exemplo 3](#exemplo-3-do-desvio-no-painel-até-o-documento-na-câmara) |

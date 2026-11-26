@@ -19,7 +19,7 @@ Hoje o QSA vem de um conjunto escrito no código (`scripts/enrich_receita_socios
 
 Achados que mudam o que a E3 afirmava (detalhes na [seção 8](#8-lacunas-encontradas-e-plano-de-implementação)):
 
-1. O painel exibe `documento_fornecedor` na tabela dos 10 maiores fornecedores. Se o fornecedor for pessoa física, é o **CPF completo**.
+1. O painel exibe `documento_fornecedor` na tabela dos 10 maiores fornecedores. Se o fornecedor for pessoa física, é o **CPF completo**. *Corrigido na exibição em 26/11/2026 (L1, seção 8): o CPF continua no arquivo do lakehouse até a zona de consumo existir (L3).*
 2. `sk_fornecedor` é `md5(chave_fornecedor)`, e para pessoa física a chave é o CPF. Um md5 de CPF se desfaz por força bruta, então o campo é o CPF disfarçado e está na Gold.
 3. A E3 diz que o CPF do parlamentar "não é gravado". Isso vale para a Bronze. O **OLTP da E1 guarda `parlamentar.cpf` completo**, e o CSV baixado também.
 4. `txtPassageiro` "fica só na Bronze" na E3, mas também está em `despesa_ceap.passageiro` (OLTP), no Delta `despesa_ceap` da E2 e no WAL do CDC.
@@ -252,7 +252,7 @@ O cruzamento CEAP × QSA pode identificar pessoas, e atribuir a elas valores, qu
 | R4 | **Junção espúria entre CPF e CNPJ:** pagamento a uma pessoa física atribuído a um sócio sem relação | `SUBSTR(regexp_replace(d.cnpj_cpf, ...), 1, 8)` não filtra o tamanho: os 8 primeiros dígitos de um CPF (11) podem coincidir com a raiz de um CNPJ | Junção só com `length(documento) = 14` | Alvo E4 |
 | R5 | **Vazamento pela saída e pelos logs:** nome e CPF mascarado impressos em tela | `consulta_caminho_societario.py` imprime as duas colunas, e o `docker compose up` grava no log do container | Saída padrão com pseudônimo; `--identificar` só no papel `ceap_auditor` | Alvo E4 |
 | R6 | **Reuso para outro fim:** somar novas bases de pessoas ao cruzamento amplia o perfil | Nenhuma trava hoje | **Lista fechada** de cruzamentos permitidos (abaixo); qualquer outro exige revisar esta seção (art. 7º, §7º) | Alvo E4 |
-| R7 | **Razão social que é nome de pessoa** (EI e MEI) revela o sócio mesmo sem o nome dele | `razao_social_fornecedor` e `nome_fornecedor` vão ao painel | No consumo, razão social terminada em 11 dígitos é omitida e só o CNPJ é exibido | Alvo E4 |
+| R7 | **Razão social que é nome de pessoa** (EI e MEI) revela o sócio mesmo sem o nome dele | `razao_social_fornecedor` e `nome_fornecedor` vão ao painel | No consumo, razão social terminada em 11 dígitos é omitida e só o CNPJ é exibido | Parcial (26/11/2026): no painel, os 11 dígitos são mascarados em vez de omitir a razão social; o nome continua visível, como decidido para o fornecedor PF |
 
 **Cruzamentos permitidos (lista fechada):**
 
@@ -335,7 +335,7 @@ Cada linha vem de uma leitura do código. A prioridade considera o dano ao titul
 
 | # | Achado | Onde | Ação | Prioridade |
 | :--- | :--- | :--- | :--- | :--- |
-| L1 | O painel exibe o documento do fornecedor; para PF é o **CPF completo** | `painel/app.py` (coluna "CNPJ/CPF" dos 10 maiores fornecedores); `mart_concentracao_parlamentar.documento_fornecedor` | Macro `mascara_cpf` no dbt (A.5); o painel mostra a coluna mascarada | Alta |
+| L1 | O painel exibe o documento do fornecedor; para PF é o **CPF completo** | `painel/app.py` (coluna "CNPJ/CPF" dos 10 maiores fornecedores); `mart_concentracao_parlamentar.documento_fornecedor` | Macro `mascara_cpf` no dbt (A.5); o painel mostra a coluna mascarada. **Feito em 26/11/2026 na camada semântica**, de onde o painel lê desde a E4: `met_fornecedor_parlamentar` e `met_lancamento_parlamentar` entregam `***.456.789-**`, o link do documento digitalizado não é exibido quando o fornecedor é pessoa física (o recibo traz o CPF completo; 4.676 lançamentos na janela), e o teste `assert_semantico_sem_cpf_completo` barra o build. A Gold e o arquivo do lakehouse ainda têm o CPF completo: quem abre o `ceap.duckdb` o lê (L3) | Alta |
 | L2 | `sk_fornecedor` de PF é `md5(CPF)`, reversível por força bruta, e está na Gold | `dim_fornecedor.sql` | Pseudônimo com HMAC para PF (A.2), calculado na Bronze | Alta |
 | L3 | Sem papéis: superusuário `postgres` nos serviços que usam o banco; painel monta o lakehouse inteiro | `docker-compose.yml` | Seção 6 e apêndices A.1, A.3, A.4 | Alta |
 | L4 | Cruzamento: beneficiário final sem limiar, soma sem ponderação, junção sem filtro de 14 dígitos | `enrich_receita_socios.py`; `consulta_caminho_societario.py`; `enriquecimento.md` | Controles R2, R3 e R4 da seção 5 | Alta |
@@ -345,7 +345,7 @@ Cada linha vem de uma leitura do código. A prioridade considera o dano ao titul
 | L8 | `consulta_caminho_societario.py` imprime nome e CPF mascarado no log do container | `scripts/consulta_caminho_societario.py` | Controle R5 | Média |
 | L9 | Descarte só lógico: Delta guarda arquivos antigos até o `VACUUM` | `bronze.py`; `enrich_receita_socios.py` | Tarefa T2 | Média |
 | L15 | CPF de fornecedor PF entra completo pela staging do OLTP, por `fornecedor.cnpj_cpf` e pelo Delta da E2; a máscara na Bronze não os alcança | `001_create_tables.sql` (`stg_ceap_raw`, `fornecedor`); `ingest_ceap.py` (`COPY`, `SQL_POPULATE_FORNECEDOR`); `batch_ingest_lakehouse.py` e `cdc_stream_consumer.py` (`cnpj_cpf`) | Aplicar a mesma máscara ou pseudônimo nas duas junções do `ingest_ceap.py` (a chave única `(cnpj_cpf, razao_social)` e o `JOIN` com a despesa usam a mesma expressão) e nos `SELECT` do Delta; teste de staging vazia | Alta |
-| L10 | Nome do fornecedor pode trazer CPF (MEI e empresário individual) | `dim_fornecedor.nome_fornecedor` | Medir (consulta em 3.2) e mascarar sequências de 11 dígitos | Média |
+| L10 | Nome do fornecedor pode trazer CPF (MEI e empresário individual) | `dim_fornecedor.nome_fornecedor` | Medir (consulta em 3.2) e mascarar sequências de 11 dígitos. **Feito em 26/11/2026 na camada semântica:** 426 pares deputado × fornecedor tinham 11 dígitos seguidos no nome (CPF de MEI, ou CNPJ truncado, que também é mascarado por precaução) e 29 tinham CPF pontuado; a macro `mascara_cpf_no_texto` cobre os dois formatos, e o mesmo teste do L1 confere | Média |
 | L11 | Planilha da E1 diz que a fonte CNPJ/Receita não contém dado pessoal | Aba "1 Fontes", linha 3 | Seção 9 | Média |
 | L12 | `_hash_lancamento` inclui o `cpf` e o CPF é recuperável por força bruta | `ingestao/bronze.py` (`hash_expr`) | Tirar `cpf` do insumo (o `nuDeputadoId` já distingue o deputado), reprocessar os anos pelo backfill e conferir o teste `unique` | Baixa |
 | L13 | Cache da API e CSVs sem prazo | `bronze_historico.py`; `base-dados/` | Tarefas T3 e T4 | Baixa |

@@ -6,6 +6,7 @@ import psycopg2
 from psycopg2 import sql
 import pyarrow as pa
 from deltalake import DeltaTable, write_deltalake
+from batch_ingest_lakehouse import tabela_arrow  # mesmos tipos fixos do lote (ver SCHEMA_DESPESA_CEAP)
 
 def get_db_connection():
     db_host = os.getenv("DB_HOST", "localhost")
@@ -180,8 +181,7 @@ class CDCDeltaConsumer:
         t0 = time.time()
         print(f"\n[CDC - PROPAGAÇÃO] Recebidos {len(records)} eventos de mudança do OLTP.")
 
-        col_dict = {col: [r[i] for r in records] for i, col in enumerate(colnames)}
-        arrow_batch = pa.Table.from_pydict(col_dict)
+        arrow_batch = tabela_arrow(colnames, records)
 
         # Se a tabela Delta ainda não existe, cria-a
         if not os.path.exists(os.path.join(self.delta_table_path, "_delta_log")):

@@ -2,7 +2,7 @@
 
 > Preparação para a arguição (issue #13). Cada resposta cabe em 30 segundos e aponta onde está a
 > evidência. Quem responde é quem tratou do assunto no [roteiro](roteiro.md).
-> Os números vêm das subidas do zero de 24 e 25/11/2026.
+> Os números vêm das subidas do zero de 24, 25 e 26/11/2026.
 
 ## Gestão
 
@@ -50,12 +50,12 @@ não serve como grão: `ideDocumento` vale 0 em 30 mil linhas e se repete em bil
 
 **9. Como o partido é atribuído, se o deputado trocou de partido?**
 Pelo partido da **data do gasto**, com SCD tipo 2 montado da API de histórico da Câmara. O CSV regrava
-o partido com o atual em 22% dos lançamentos; sem o SCD2, R$ 33 milhões iriam para o partido errado.
+o partido com o atual em 21% dos lançamentos; sem o SCD2, R$ 29 milhões iriam para o partido errado.
 
 **10. Como vocês garantem que o painel e a fila mostram o mesmo número?**
 A métrica é definida uma vez, na camada `semantico`, e os dois só leem dela. Testes no `dbt build`
-conferem que o gasto bate entre todas as visões e o fato (R$ 0,01). Um script confere 12 números da
-tela do painel, e um asset check confere a fila contra a camada a cada publicação.
+conferem que o gasto bate entre todas as visões e o fato (R$ 0,01). Um script confere 21 números e
+elementos da tela do painel, e um asset check confere a fila contra a camada a cada publicação.
 
 **11. Por que views, e não tabelas, na camada semântica?**
 Views nunca ficam defasadas em relação à Gold e não exigem cópia. Custam ~130 ms a mais por leitura
@@ -65,7 +65,8 @@ p90 passar de 1 s (hoje 251 ms).
 **12. Por que não usaram o dbt Semantic Layer (MetricFlow)?**
 Desvio contra a mediana mensal da UF, z robusto com MAD, HHI e rankings por deputado não se expressam
 como métricas simples, e a API de métricas só existe no dbt Cloud. É um argumento, não uma medição; o
-gatilho para prototipar é a camada passar de 50 métricas (hoje 32).
+gatilho para prototipar é a camada passar de 50 métricas. Eram 32 na entrega e são 50 depois das
+melhorias do painel: a próxima métrica dispara o gatilho.
 
 ## ETL reverso e disponibilização
 
@@ -91,9 +92,13 @@ são gravadas pelo banco, inclusive para o superusuário. Corrigir é registrar 
 ## Privacidade e acesso
 
 **17. O painel expõe dado pessoal?**
-Sim, e está registrado como a pendência mais grave: mostra o CPF completo de 314 fornecedores pessoa
-física. A análise de LGPD propõe mascarar na entrada e usar pseudônimo com chave secreta. Isso disparou
-o gatilho do ADR-0007, e a decisão ainda não foi revista.
+Não expõe mais o CPF. Ele mostrava o CPF completo de 314 fornecedores pessoa física, o achado mais
+grave da análise de LGPD. Desde 26/11 a camada semântica entrega `***.456.789-**`, também quando o CPF
+vem dentro do nome (MEI), o link do recibo de pessoa física não é exibido (o PDF traz o CPF), e o teste
+`assert_semantico_sem_cpf_completo` barra o build. O que continua
+aberto: o arquivo do lakehouse ainda tem o CPF completo, e a zona de consumo separada (com pseudônimo)
+não foi feita; por isso o gatilho do ADR-0007 segue sem revisão. O nome do fornecedor continua visível,
+porque é o objeto do controle.
 
 **18. Qual a base legal para tratar esses dados?**
 Principalmente o art. 7º, IV (estudo por órgão de pesquisa), com o §3º para o reuso de dado público e o
@@ -114,6 +119,9 @@ ADR-0008, e a retrospectiva reconhece que ela não veio de um gatilho.
 
 **21. Algum gatilho de ADR disparou?**
 Só o do ADR-0007 (acesso restrito por perfil, por causa do CPF no painel), e a decisão não foi revista.
+O mesmo ADR limita o painel a 8 "visões". Depois das melhorias são 11 gráficos e tabelas, mas em 3
+blocos, um por parte da pergunta; a Squad registrou no portfólio que visão é o bloco, então esse
+gatilho não disparou.
 As revisões reais (ADR-0005, duas vezes) vieram da implementação, não de gatilhos. O ADR-0008 já saiu
 com limiar, valor atual e ação para cada gatilho. [Portfólio de ADRs](../adr/README.md).
 
@@ -124,3 +132,22 @@ e sobe Dagster e painel. Testado em clone limpo, com banco novo, antes da entreg
 **23. O que vocês fariam diferente?**
 Perfilar a fonte antes de modelar, tratar privacidade desde a E1 e criar a camada semântica junto com a
 Gold. [Retrospectiva](../diario/retrospectiva.md).
+
+## O painel e a prova
+
+**24. Como alguém confere um número do painel na fonte?**
+No bloco 3, cada um dos maiores lançamentos tem o link "abrir na Câmara", que abre o documento
+digitalizado publicado pela própria Câmara. A soma dos lançamentos é o mesmo gasto de todas as outras
+visões, e a série mensal soma exatamente o desvio acumulado do ranking (testes no `dbt build`).
+[Linhagem, exemplo 3](../linhagem.md#exemplo-3-do-desvio-no-painel-até-o-documento-na-câmara).
+
+**25. Por que alguns lançamentos não têm link?**
+Por dois motivos. A Câmara publicou o documento de 94% dos lançamentos da janela (100% das notas
+eletrônicas e dos recibos, 87% das notas em papel). E o painel não mostra o link quando o fornecedor é
+pessoa física: o recibo traz o CPF completo, e o link desfaria a máscara (cerca de 1% dos lançamentos).
+Sem o link, o lançamento continua identificado pelo fornecedor, pela data e pelo valor.
+
+**26. O desvio do líder é um pico ou é constante?**
+A linha mês a mês do painel responde: o líder ficou acima da mediana da UF em todos os 30 meses. O
+gráfico "constante ou pontual" mostra o mesmo para todos: os 15 em alerta ficam acima da mediana em pelo
+menos 63% dos meses, então o ranking não é puxado por um mês isolado.
