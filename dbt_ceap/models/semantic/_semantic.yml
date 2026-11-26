@@ -13,6 +13,15 @@ sources:
     description: >-
       Uma linha por `dbt build` ou `dbt test`, com a contagem dos testes por resultado. Criada no
       on-run-start e preenchida no on-run-end (macros/registra_build.sql).
+    columns:
+    - {name: invocation_id, description: Identificador da execução do dbt.}
+    - {name: comando, description: Comando do dbt (build ou test).}
+    - {name: executado_em, description: Fim da execução.}
+    - {name: testes_total, description: Testes executados.}
+    - {name: testes_aprovados, description: Testes aprovados.}
+    - {name: testes_aviso, description: Testes com severidade warn que acusaram algo.}
+    - {name: testes_reprovados, description: Testes reprovados ou com erro.}
+    - {name: modelos_com_erro, description: Modelos ou seeds que falharam.}
 
 models:
 - name: met_parlamentar
@@ -317,11 +326,15 @@ models:
     data_type: decimal(14,2)
     description: Valor debitado da cota no lançamento (negativo em créditos).
     meta: {metrica: true, unidade: R$, formula: "vlrLiquido do CSV da Câmara"}
-  - {name: url_documento, data_type: varchar, description: Link para o documento digitalizado no site da Câmara (vazio quando a Câmara não publicou).}
+  - {name: url_documento, data_type: varchar, description: 'Link para o documento digitalizado no site da Câmara. Vazio quando a Câmara não publicou ou quando o fornecedor é pessoa física (o documento traz o CPF completo).'}
   - name: tem_documento_publicado
     data_type: boolean
-    description: Verdadeiro se a Câmara publicou o link do documento.
-    meta: {metrica: true, unidade: regra, formula: "url_documento is not null"}
+    description: Verdadeiro se a Câmara publicou o link do documento (mesmo que ele não seja exibido).
+    meta: {metrica: true, unidade: regra, formula: "urlDocumento do CSV não vazio"}
+  - name: link_omitido_lgpd
+    data_type: boolean
+    description: Verdadeiro se a Câmara publicou o documento, mas o link não é exibido porque o fornecedor é pessoa física.
+    meta: {metrica: true, unidade: regra, formula: "documento publicado e fornecedor com CPF (11 dígitos)"}
   - name: posicao_valor
     data_type: bigint
     description: Posição do lançamento pelo valor, dentro do deputado e da subcota (1 = o maior).

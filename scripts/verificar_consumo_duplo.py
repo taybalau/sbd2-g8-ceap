@@ -94,8 +94,12 @@ detalhe = at.dataframe[0].value
 (ok if set(detalhe["posicao_ranking"]) == set(range(1, len(alerta) + 1)) and len(detalhe) == len(alerta)
  else falhas).append(f"tabela de detalhe: os {len(alerta)} em alerta, mesmas posições da camada")
 lanc = next(df.value for df in at.dataframe if "url_documento" in df.value.columns)
-(ok if abs(float(lanc["valor_liquido"].iloc[0]) - float(lanc1[0])) < 0.01 and lanc["url_documento"].iloc[0] == lanc1[1]
- else falhas).append(f"maior lançamento da categoria do líder: R$ {lanc1[0]} com o mesmo link")
+link_tela = lanc["url_documento"].iloc[0]
+mesmo_link = (link_tela is None or link_tela != link_tela) if lanc1[1] is None else link_tela == lanc1[1]
+(ok if abs(float(lanc["valor_liquido"].iloc[0]) - float(lanc1[0])) < 0.01 and mesmo_link
+ else falhas).append(f"maior lançamento da categoria do líder: R$ {lanc1[0]} com o mesmo link ({lanc1[1] or 'sem link'})")
+pf_com_link = lanc[lanc["documento_fornecedor"].astype(str).str.startswith("***") & lanc["url_documento"].notna()]
+(falhas if len(pf_com_link) else ok).append("nenhum link de documento de pessoa física na tela")
 cpf = re.compile(r"(^|[^0-9])[0-9]{3}[.]?[0-9]{3}[.]?[0-9]{3}-?[0-9]{2}([^0-9]|$)")
 expostos = [v for df in at.dataframe for v in df.value.astype(str).to_numpy().ravel() if cpf.search(v)]
 (falhas if expostos else ok).append(f"nenhum CPF completo nas tabelas da tela: {expostos[:3] or 'ok'}")

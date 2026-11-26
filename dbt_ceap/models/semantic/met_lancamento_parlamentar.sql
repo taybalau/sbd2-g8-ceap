@@ -4,7 +4,9 @@
 --
 -- LGPD (docs/lgpd.md): CPF de fornecedor pessoa física mascarado no documento e no nome (MEI);
 -- nome do passageiro e trecho do bilhete ficam de fora (o passageiro pode não ser o deputado).
--- O consumidor deve filtrar por id_deputado (e num_subcota): a view tem ~590 mil linhas e o DuckDB
+-- O link do documento também fica de fora quando o fornecedor é pessoa física: o recibo digitalizado
+-- traz o CPF completo, e o link desfaria a máscara com um clique (link_omitido_lgpd marca esses casos).
+-- O consumidor deve filtrar por id_deputado (e num_subcota): a view tem centenas de milhares de linhas e o DuckDB
 -- empurra esse filtro para antes da janela de posicao_valor, que é particionada pelas mesmas colunas.
 select
     f.id_lancamento,
@@ -24,8 +26,9 @@ select
         else 'outro'
     end                                                             as tipo_documento,
     f.valor_liquido,
-    f.url_documento,
+    case when length(forn.documento_fornecedor) = 11 then null else f.url_documento end as url_documento,
     f.url_documento is not null                                     as tem_documento_publicado,
+    f.url_documento is not null and length(forn.documento_fornecedor) = 11 as link_omitido_lgpd,
     row_number() over (partition by f.id_deputado, f.num_subcota
                        order by f.valor_liquido desc, f.id_lancamento) as posicao_valor
 from {{ ref('fct_lancamento_ceap') }} f

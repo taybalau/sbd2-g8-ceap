@@ -400,8 +400,10 @@ st.dataframe(
         "valor_liquido": st.column_config.NumberColumn("Valor (R$)", format="%.2f"),
         "url_documento": st.column_config.LinkColumn("Documento", display_text="abrir na Câmara"),
     })
-st.caption("Documento vazio: a Câmara não publicou o arquivo digitalizado desse lançamento (comum em notas "
-           "antigas, telefonia e bilhetes). Nome do passageiro e trecho de voo não são exibidos (LGPD).")
+st.caption("Documento vazio: a Câmara não publicou o arquivo digitalizado, ou o fornecedor é pessoa física. "
+           "Neste caso o link não é exibido porque o recibo traz o CPF completo; o lançamento continua "
+           "identificado por fornecedor, data e valor. Nome do passageiro e trecho de voo também não são "
+           "exibidos (LGPD).")
 cd1, cd2 = st.columns(2)
 cd1.download_button("Baixar os fornecedores (CSV)", csv(forn[["nome_fornecedor", "documento_fornecedor", "gasto",
                     "part", "notas"]]), f"fornecedores_{id_sel}.csv", "text/csv")
