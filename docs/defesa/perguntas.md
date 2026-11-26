@@ -119,8 +119,9 @@ ADR-0008, e a retrospectiva reconhece que ela não veio de um gatilho.
 
 **21. Algum gatilho de ADR disparou?**
 Só o do ADR-0007 (acesso restrito por perfil, por causa do CPF no painel), e a decisão não foi revista.
-O mesmo ADR limita o painel a 8 "visões": são 3 blocos, mas 11 gráficos e tabelas depois das
-melhorias, e o ADR não define a unidade; isso está registrado no portfólio.
+O mesmo ADR limita o painel a 8 "visões". Depois das melhorias são 11 gráficos e tabelas, mas em 3
+blocos, um por parte da pergunta; a Squad registrou no portfólio que visão é o bloco, então esse
+gatilho não disparou.
 As revisões reais (ADR-0005, duas vezes) vieram da implementação, não de gatilhos. O ADR-0008 já saiu
 com limiar, valor atual e ação para cada gatilho. [Portfólio de ADRs](../adr/README.md).
 

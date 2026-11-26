@@ -151,7 +151,7 @@ Dois gatilhos mudaram de valor:
 
 | ADR | Gatilho | Limiar | Na E4 | Hoje | Disparou? |
 | :--- | :--- | ---: | ---: | ---: | :---: |
-| 0007 | Número de visões do painel | mais de 8 | 3 | **3 blocos, ou 11 gráficos e tabelas** | depende da unidade |
+| 0007 | Número de visões do painel (visão = bloco da pergunta) | mais de 8 | 3 | **3** (11 gráficos e tabelas) | não |
 | 0008 | Métricas na camada semântica | mais de 50 | 32 | **50** | não, mas está no limite |
 | 0008 | Leitura do painel pela camada semântica (p90) | mais de 1 s | 251 ms | 254 ms (7 views; [evidência](../evidencias/painel_leitura_semantica.json)) | não |
 
@@ -160,11 +160,18 @@ concentração) e diz que o gatilho existe porque, acima de 8, "o código ficari
 que a configuração". Por bloco, continuam 3. Por gráfico ou tabela, são 11: barras do ranking, tabela
 dos 15 em alerta, dispersão "constante ou pontual", barras de partidos, tabela do erro da sobrescrita,
 linha mês a mês, posição na UF, barras de categorias, fornecedores, lançamentos e a tabela completa do
-ranking. O código do painel passou de 193 para 420 linhas. O ADR não define a unidade, e a decisão de
-considerar o gatilho disparado ou não é da Squad. Até lá, fica registrado aqui com os dois valores.
+ranking. O código do painel passou de 193 para 420 linhas.
 
-**ADR-0008, métricas.** A próxima métrica passa do limiar e obriga a prototipar o dbt Semantic Layer
-(alternativa 2.1-D do ADR).
+**Decisão (26/11/2026):** visão é um **bloco do painel**, ou seja, uma parte da pergunta de gestão, como
+no próprio ADR ("três visões fixas"). O gatilho **não disparou**: os 11 gráficos e tabelas detalham as
+mesmas 3 partes da pergunta, e o painel continua sendo código simples, sem a configuração por
+pergunta que justificaria o Metabase. Um bloco novo (uma 4ª parte da pergunta, ou visões pedidas de
+fora da Squad) conta para o limite. O que continua disparado no ADR-0007 é o gatilho de acesso por
+perfil ([acima](#adr-0007-o-gatilho-de-acesso-por-perfil-disparou)).
+
+**ADR-0008, métricas.** O limite de 50 fica como está. Mudá-lo justamente quando ele está para ser
+atingido tiraria o sentido do gatilho. A próxima métrica passa do limiar, e aí a Squad prototipa o dbt
+Semantic Layer, como prevê a alternativa 2.1-D do ADR.
 
 ## Como reconferir
 
