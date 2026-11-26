@@ -18,6 +18,7 @@ import sys
 from pathlib import Path
 
 import duckdb
+import pandas as pd
 from streamlit.testing.v1 import AppTest
 
 RAIZ = Path(__file__).resolve().parents[1]
@@ -95,7 +96,7 @@ detalhe = at.dataframe[0].value
  else falhas).append(f"tabela de detalhe: os {len(alerta)} em alerta, mesmas posições da camada")
 lanc = next(df.value for df in at.dataframe if "url_documento" in df.value.columns)
 link_tela = lanc["url_documento"].iloc[0]
-mesmo_link = (link_tela is None or link_tela != link_tela) if lanc1[1] is None else link_tela == lanc1[1]
+mesmo_link = pd.isna(link_tela) if lanc1[1] is None else link_tela == lanc1[1]
 (ok if abs(float(lanc["valor_liquido"].iloc[0]) - float(lanc1[0])) < 0.01 and mesmo_link
  else falhas).append(f"maior lançamento da categoria do líder: R$ {lanc1[0]} com o mesmo link ({lanc1[1] or 'sem link'})")
 pf_com_link = lanc[lanc["documento_fornecedor"].astype(str).str.startswith("***") & lanc["url_documento"].notna()]

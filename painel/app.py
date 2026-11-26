@@ -75,6 +75,12 @@ def md(texto: str) -> str:
     return texto.replace("$", "\\$")
 
 
+def brasilia(t) -> str:
+    """Data e hora em Brasília: o banco grava em UTC."""
+    t = pd.Timestamp(t)
+    return (t.tz_localize("UTC") if t.tzinfo is None else t).tz_convert("America/Sao_Paulo").strftime("%d/%m/%Y %H:%M")
+
+
 def mes(d) -> str:
     return pd.Timestamp(d).strftime("%m/%Y")
 
@@ -121,12 +127,12 @@ st.caption(
     f"A mediana é o valor do meio: metade dos deputados da UF gastou menos e metade gastou mais, então "
     f"poucos gastos muito altos não a distorcem. "
     f"Janela comparável: **{mes(ctx.janela_inicio)} a {mes(ctx.janela_fim)}** ({ctx.meses_janela} meses). "
-    f"Dados da Câmara ingeridos em {pd.Timestamp(ctx.atualizado_em).strftime('%d/%m/%Y %H:%M')}.")
+    f"Dados da Câmara ingeridos em {brasilia(ctx.atualizado_em)} (horário de Brasília).")
 
 # ------------------------------------------------------------ selo de qualidade e freshness
 if not d["qual"].empty:
     q = d["qual"].iloc[0]
-    quando = pd.Timestamp(q.executado_em).tz_convert("America/Sao_Paulo").strftime("%d/%m/%Y %H:%M")
+    quando = brasilia(q.executado_em)
     texto = (f"**{q.testes_total} testes de dados** no build de {quando}: {q.testes_aprovados} aprovados, "
              f"{q.testes_aviso} com aviso, {q.testes_reprovados} reprovados. "
              f"[O que cada teste verifica]({SITE}/testes/)")
@@ -388,9 +394,14 @@ lanc = lancamentos(int(id_sel), int(num_cat))
 st.markdown(
     f"Os {len(lanc)} maiores lançamentos de **{sel.nome_parlamentar}** nessa categoria. Cada linha é um "
     "lançamento publicado pela Câmara; o link abre o documento digitalizado no site da Câmara.")
+# só formatação: por que a linha não tem link (a regra está na view: link_omitido_lgpd)
+lanc_tela = lanc.assign(
+    url_documento=lambda x: x.url_documento.astype("string"),
+    obs=lambda x: [("pessoa física: sem link (LGPD)" if omitido else "" if publicado else "não publicado pela Câmara")
+                   for omitido, publicado in zip(x.link_omitido_lgpd, x.tem_documento_publicado)])
 st.dataframe(
-    lanc[["posicao_valor", "data_emissao", "competencia", "nome_fornecedor", "documento_fornecedor",
-          "tipo_documento", "valor_liquido", "url_documento"]],
+    lanc_tela[["posicao_valor", "data_emissao", "competencia", "nome_fornecedor", "documento_fornecedor",
+               "tipo_documento", "valor_liquido", "url_documento", "obs"]],
     hide_index=True, use_container_width=True, height=36 * (len(lanc) + 1) + 3,
     column_config={
         "posicao_valor": st.column_config.NumberColumn("#", format="%d"),
@@ -399,11 +410,11 @@ st.dataframe(
         "nome_fornecedor": "Fornecedor", "documento_fornecedor": "CNPJ/CPF", "tipo_documento": "Tipo",
         "valor_liquido": st.column_config.NumberColumn("Valor (R$)", format="%.2f"),
         "url_documento": st.column_config.LinkColumn("Documento", display_text="abrir na Câmara"),
+        "obs": "Observação",
     })
-st.caption("Documento vazio: a Câmara não publicou o arquivo digitalizado, ou o fornecedor é pessoa física. "
-           "Neste caso o link não é exibido porque o recibo traz o CPF completo; o lançamento continua "
-           "identificado por fornecedor, data e valor. Nome do passageiro e trecho de voo também não são "
-           "exibidos (LGPD).")
+st.caption("Sem link: a Câmara não publicou o arquivo digitalizado, ou o fornecedor é pessoa física. Neste "
+           "caso o link não é exibido porque o recibo traz o CPF completo; o lançamento continua identificado "
+           "por fornecedor, data e valor. Nome do passageiro e trecho de voo também não são exibidos (LGPD).")
 cd1, cd2 = st.columns(2)
 cd1.download_button("Baixar os fornecedores (CSV)", csv(forn[["nome_fornecedor", "documento_fornecedor", "gasto",
                     "part", "notas"]]), f"fornecedores_{id_sel}.csv", "text/csv")
