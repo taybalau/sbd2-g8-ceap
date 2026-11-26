@@ -27,6 +27,10 @@ vars:
   # ETL reverso publica na fila de auditoria do PostgreSQL (mesma regra nas duas telas).
   alerta_top_n: 15
 
+# Selo de qualidade do painel: cada build grava o resultado dos testes (macros/registra_build.sql).
+on-run-start: ["{{ cria_resultado_build() }}"]
+on-run-end: ["{{ registra_build(results) }}"]
+
 models:
   ceap:
     staging:

@@ -16,6 +16,7 @@ select
     desvio_acumulado,
     desvio_relativo,
     meses_acima_mediana,
+    meses_acima_mediana / meses_com_gasto                          as proporcao_meses_acima,
     z_medio,
     hhi_fornecedores,
     posicao_ranking,

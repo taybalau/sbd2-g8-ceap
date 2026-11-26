@@ -104,6 +104,9 @@ class Tradutor(DagsterDbtTranslator):
 
     def get_asset_key(self, dbt_resource_props):
         if dbt_resource_props["resource_type"] == "source":
+            # auditoria.resultado_build é gravada pelo próprio dbt (on-run-end), não pela ingestão
+            if dbt_resource_props["source_name"] == "auditoria":
+                return AssetKey(["auditoria", dbt_resource_props["name"]])
             return AssetKey(["bronze", dbt_resource_props["name"]])
         return super().get_asset_key(dbt_resource_props)
 
