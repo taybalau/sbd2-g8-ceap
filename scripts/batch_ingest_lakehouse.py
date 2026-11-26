@@ -16,6 +16,34 @@ COLUNAS_DESPESA_CEAP = [
     "data_pagamento_restituicao", "valor_restituicao", "data_ingestao"
 ]
 
+# Tipos fixos de cada coluna (iguais ao DDL da migração 001 e ao Delta já gravado pela E2).
+# Sem isso o pyarrow deduz o tipo pelo bloco: um bloco em que a coluna vem toda vazia vira tipo
+# "null", o Delta é criado assim e o primeiro bloco com valor quebra a gravação
+# ("Cannot cast field trecho from Utf8 to Null"). Aconteceu em 26/11/2026, quando a Câmara regerou
+# os CSVs e o trecho passou a vir em poucas linhas (252 em 2023, nenhuma nos primeiros 50 mil).
+SCHEMA_DESPESA_CEAP = pa.schema([
+    ("id_despesa", pa.int64()), ("ide_documento", pa.int64()), ("id_deputado", pa.int64()),
+    ("nome_parlamentar", pa.string()), ("sigla_partido_emissao", pa.string()),
+    ("sigla_uf_emissao", pa.string()), ("codigo_legislatura", pa.int64()),
+    ("cnpj_cpf", pa.string()), ("razao_social", pa.string()), ("num_subcota", pa.int64()),
+    ("subcota_descricao", pa.string()), ("numero_documento", pa.string()),
+    ("tipo_documento", pa.int64()), ("data_emissao", pa.timestamp("us")),
+    ("valor_documento", pa.float64()), ("valor_glosa", pa.float64()), ("valor_liquido", pa.float64()),
+    ("mes_competencia", pa.int64()), ("ano_competencia", pa.int64()), ("parcela", pa.int64()),
+    ("passageiro", pa.string()), ("trecho", pa.string()), ("numero_lote", pa.int64()),
+    ("numero_ressarcimento", pa.string()), ("data_pagamento_restituicao", pa.date32()),
+    ("valor_restituicao", pa.float64()), ("data_ingestao", pa.timestamp("us", tz="UTC")),
+])
+assert SCHEMA_DESPESA_CEAP.names == COLUNAS_DESPESA_CEAP
+
+
+def tabela_arrow(colnames, rows) -> pa.Table:
+    """Monta o bloco com os tipos fixos de SCHEMA_DESPESA_CEAP, nunca deduzidos do conteúdo."""
+    if list(colnames) != COLUNAS_DESPESA_CEAP:
+        raise ValueError(f"colunas inesperadas na consulta: {colnames}")
+    return pa.Table.from_pydict({col: [r[i] for r in rows] for i, col in enumerate(colnames)},
+                                schema=SCHEMA_DESPESA_CEAP)
+
 def get_db_connection():
     db_host = os.getenv("DB_HOST", "localhost")
     db_port = os.getenv("DB_PORT", "5432")
@@ -119,8 +147,7 @@ def run_batch_ingestion_lakehouse(lakehouse_path: str = "./lakehouse", chunk_siz
             ano_linhas += qtd_chunk
             total_linhas_lidas += qtd_chunk
 
-            col_data = {col: [r[i] for r in rows] for i, col in enumerate(colnames)}
-            arrow_chunk = pa.Table.from_pydict(col_data)
+            arrow_chunk = tabela_arrow(colnames, rows)
 
             write_mode = "overwrite" if primeiro_chunk else "append"
             write_deltalake(
