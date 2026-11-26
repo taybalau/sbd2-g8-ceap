@@ -1,6 +1,6 @@
 # Diário de bordo
 
-Registros semanais da Squad G8 durante as Entregas E1, E2 e E3, cada um com três seções: **o que foi medido**, **o que surpreendeu** e **o que foi decidido**.
+Registros semanais da Squad G8 durante as Entregas E1 a E4, cada um com três seções: **o que foi medido**, **o que surpreendeu** e **o que foi decidido**.
 
 | Semana | Data | Destaque |
 | :--- | :--- | :--- |
@@ -14,5 +14,9 @@ Registros semanais da Squad G8 durante as Entregas E1, E2 e E3, cada um com trê
 | [Semana 08](semana-08.md) | 14–20/10/2026 | Início do planejamento da E3 e revisão dos aprendizados da E2 |
 | [Semana 09](semana-09.md) | 21–28/10/2026 | Avaliação da arquitetura analítica, granularidade e histórico partidário |
 | [Semana 10](semana-10.md) | 29/10–03/11/2026 | ADRs, implementação, evidências, orquestração e entrega da E3 |
+| [Semana 11](semana-11.md) | 04–17/11/2026 | Contratos de esquema, testes e dicionário gerados por script |
+| [Semana 12](semana-12.md) | 18–24/11/2026 | Mediana, camada semântica, ETL reverso, LGPD, acesso e entrega da E4 |
+| [Semana 13](semana-13.md) | 25–26/11/2026 | Tag `e4`, material da defesa, painel com documento e correção da subida do zero |
+| [Retrospectiva](retrospectiva.md) | 24/11/2026 | O ciclo de vida do dado da E1 à E4 |
 
 A planilha de acompanhamento da Squad está disponível para download: [SBD2_Planilha de acompanhamento_G8.xlsx](<../SBD2_Planilha de acompanhamento_G8.xlsx>).
