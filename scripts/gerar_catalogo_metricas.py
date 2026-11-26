@@ -24,9 +24,10 @@ def main():
     modelos = sorted((n for n in manifest["nodes"].values()
                       if n["resource_type"] == "model" and n["schema"] == "semantico"),
                      key=lambda n: n["original_file_path"])
-    # ordem de leitura: parlamentar, partido, categoria, fornecedor, contexto
-    ordem = ["met_parlamentar", "met_partido", "met_categoria_parlamentar", "met_fornecedor_parlamentar",
-             "met_contexto"]
+    # ordem de leitura do painel: quem (parlamentar, mês a mês), partido, onde (categoria, fornecedor,
+    # lançamento) e o contexto (janela, qualidade)
+    ordem = ["met_parlamentar", "met_parlamentar_mes", "met_partido", "met_categoria_parlamentar",
+             "met_fornecedor_parlamentar", "met_lancamento_parlamentar", "met_contexto", "met_qualidade_build"]
     modelos.sort(key=lambda n: ordem.index(n["name"]) if n["name"] in ordem else len(ordem))
 
     out, faltando, total = [INICIO, "",

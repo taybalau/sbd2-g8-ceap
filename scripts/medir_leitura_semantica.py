@@ -1,19 +1,23 @@
 """
 Medições da E4 para o ADR-0008: quanto custa ao consumidor (o painel) ler as métricas por cada caminho.
 
-Caminhos medidos, sempre com as MESMAS 5 consultas que o painel faz (uma por view da camada semântica)
-e o volume real do lakehouse:
+Caminhos medidos, sempre com as MESMAS consultas que o painel faz ao abrir (uma por view que ele lê
+inteira) e o volume real do lakehouse:
   1. warehouse, views      — DuckDB lendo as views do schema `semantico` (o que o painel usa hoje);
   2. warehouse, tabelas    — as mesmas métricas materializadas como tabelas (custo de não usar views);
   3. cópia em Parquet      — um arquivo por view, lido com DuckDB;
   4. cópia em CSV          — a opção nula: um arquivo por view, lido com pandas.
 
 Para cada caminho: latência de leitura (mediana e p90 de N leituras, cada uma com conexão nova),
-custo de produzir a cópia (tempo de exportação) e espaço em disco. Grava o JSON em
-docs/evidencias/e4_leitura_semantica.json e imprime a tabela em Markdown.
+custo de produzir a cópia (tempo de exportação) e espaço em disco. Mede também a consulta filtrada
+dos lançamentos (met_lancamento_parlamentar, um parlamentar e uma categoria), que o painel faz a cada
+seleção em vez de ler a view inteira. Grava o JSON e imprime a tabela em Markdown.
+
+A medição da entrega E4 (5 views; citada no ADR-0008) está em docs/evidencias/e4_leitura_semantica.json.
+Medições posteriores vão para outro arquivo, para não reescrever a evidência da entrega.
 
 Uso (com o lakehouse gerado, dentro do container da E3):
-    python scripts/medir_leitura_semantica.py [n_leituras]
+    python scripts/medir_leitura_semantica.py [n_leituras] [arquivo_saida.json]
 """
 import json
 import os
@@ -31,10 +35,11 @@ import pandas as pd
 
 RAIZ = Path(__file__).resolve().parents[1]
 BANCO = Path(os.getenv("LAKEHOUSE_PATH", RAIZ / "lakehouse")) / "ceap.duckdb"
-SAIDA = RAIZ / "docs" / "evidencias" / "e4_leitura_semantica.json"
 N = int(sys.argv[1]) if len(sys.argv) > 1 else 20
-VIEWS = ["met_parlamentar", "met_partido", "met_categoria_parlamentar", "met_fornecedor_parlamentar",
-         "met_contexto"]
+SAIDA = (RAIZ / sys.argv[2]) if len(sys.argv) > 2 else RAIZ / "docs" / "evidencias" / "painel_leitura_semantica.json"
+# as views que o painel lê inteiras ao abrir (painel/app.py, carregar())
+VIEWS = ["met_parlamentar", "met_parlamentar_mes", "met_partido", "met_categoria_parlamentar",
+         "met_fornecedor_parlamentar", "met_contexto", "met_qualidade_build"]
 
 
 def tamanho(caminho: Path) -> int:
@@ -104,6 +109,21 @@ def main():
                     return sum(len(pd.read_csv(p / f"{v}.csv")) for v in VIEWS)
             resultados[f"copia_{formato}"] = {**medir(ler), "custo_copia_ms": custo, "bytes": tamanho(pasta),
                                               "defasagem": "até a próxima exportação agendada"}
+        # consulta filtrada que o painel faz a cada seleção: os maiores lançamentos do líder na categoria 1
+        con = duckdb.connect(str(BANCO), read_only=True)
+        dep, cat = con.execute(
+            "select p.id_deputado, c.num_subcota from semantico.met_parlamentar p "
+            "join semantico.met_categoria_parlamentar c using (id_deputado) "
+            "where p.posicao_ranking = 1 and c.posicao_excesso = 1 limit 1").fetchone()
+        con.close()
+
+        def ler_lancamentos():
+            con = duckdb.connect(str(BANCO), read_only=True)
+            n = len(con.execute("select * from semantico.met_lancamento_parlamentar where id_deputado = ? "
+                                "and num_subcota = ? and posicao_valor <= 15", [dep, cat]).df())
+            con.close()
+            return n
+        lancamentos = medir(ler_lancamentos)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
@@ -116,7 +136,8 @@ def main():
     evidencia = {"medido_em": datetime.now(timezone.utc).isoformat(timespec="seconds"), "n_leituras": N,
                  "ambiente": f"{platform.system()} {platform.machine()}, Python {platform.python_version()}, "
                              f"DuckDB {duckdb.__version__}",
-                 "banco_bytes": tamanho(BANCO), "volume": volume, "caminhos": resultados}
+                 "banco_bytes": tamanho(BANCO), "volume": volume, "caminhos": resultados,
+                 "lancamentos_por_selecao": lancamentos}
     SAIDA.parent.mkdir(parents=True, exist_ok=True)
     SAIDA.write_text(json.dumps(evidencia, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
@@ -128,6 +149,8 @@ def main():
         espaco = "— (lê o banco)" if r["bytes"] is None else f"{r['bytes'] / 1024:,.0f} KiB".replace(",", ".")
         print(f"| {nomes[k]} | {r['latencia_mediana_ms']:.0f} ms | {r['latencia_p90_ms']:.0f} ms | "
               f"{r['custo_copia_ms']:.0f} ms | {espaco} | {r['defasagem']} |")
+    print(f"\nLançamentos de um parlamentar numa categoria (a cada seleção): mediana "
+          f"{lancamentos['latencia_mediana_ms']:.0f} ms, p90 {lancamentos['latencia_p90_ms']:.0f} ms")
     print(f"\n{volume} — {N} leituras por caminho; evidência em {SAIDA.relative_to(RAIZ)}")
 
 
